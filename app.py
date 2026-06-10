@@ -7,10 +7,21 @@ from rag import (
     answer_question,
 )
 
+
+@st.cache_resource
+def get_rag_resources():
+    embeddings = create_embeddings()
+    vector_store = load_vector_store(embeddings)
+    llm = create_llm()
+    return vector_store, llm
+
+
 st.title("Notes Q&A")
 
 with st.sidebar:
     k = st.slider("Sources to retrieve", min_value=1, max_value=5, value=3)
+    if st.button("Reload index"):
+        get_rag_resources.clear()
     if st.button("Clear chat"):
         st.session_state.messages = []
 
@@ -42,10 +53,7 @@ if question:
 
     with st.chat_message("assistant"):
         with st.spinner("Finding the answer..."):
-            embeddings = create_embeddings()
-            vector_store = load_vector_store(embeddings)
-            llm = create_llm()
-
+            vector_store, llm = get_rag_resources()
             answer, docs = answer_question(
                 question,
                 vector_store,
