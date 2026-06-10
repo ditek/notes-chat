@@ -6,6 +6,7 @@ from langchain_core.documents import Document
 from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
 from langchain_chroma import Chroma
 from huggingface_hub import InferenceClient
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
 
@@ -24,32 +25,34 @@ def _load_notes(notes_dir):
     return notes
 
 
-def _chunk_notes(notes, chunk_size=800, chunk_overlap=150):
-    if chunk_overlap >= chunk_size:
-        raise ValueError("chunk_overlap must be smaller than chunk_size")
+def _chunk_notes(notes, chunk_size=500, chunk_overlap=50):
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        separators=[
+            "\n## ",
+            "\n### ",
+            "\n\n",
+            "\n",
+            " ",
+            "",
+        ],
+    )
     chunks = []
     for note in notes:
-        content = note['content']
-        print(f'Chunking {note["metadata"]["source"]} with {len(content)} chars')
-        content = note['content']
-        chunk_id = 0
-        step = chunk_size - chunk_overlap
-        i = 0
-        while i < len(content):
-            end = min(i + chunk_size, len(content))
-            chunk = content[i:end]
+        source = note["metadata"]["source"]
+        content = note["content"]
+        print(f"Chunking {source} with {len(content)} chars")
+        split_texts = splitter.split_text(content)
+        for chunk_id, chunk_text in enumerate(split_texts):
             chunks.append({
-                'content': chunk,
-                'metadata': {
-                    'source': note['metadata']['source'],
-                    'chunk_id': chunk_id,
-                    'start': i,
-                    'end': end
-                }
+                "content": chunk_text,
+                "metadata": {
+                    "source": source,
+                    "chunk_id": chunk_id,
+                },
             })
-            chunk_id += 1
-            print(f'\tchunk {chunk_id}, chars {i}-{end}')
-            i += step
+            print(f"\tchunk {chunk_id}: {len(chunk_text)} chars")
     return chunks
 
 
@@ -123,19 +126,20 @@ def create_llm():
     if not token:
         raise RuntimeError("Missing HF_TOKEN or HUGGINGFACEHUB_API_TOKEN")
     return InferenceClient(
-        model="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-        provider="featherless-ai",
+        model="Qwen/Qwen3-4B-Instruct-2507",
+        provider="nscale",
         api_key=token,
     )
 
 
-def _ask_llm(prompt, llm) -> str | None:
+def _ask_llm(system_prompt, user_prompt, llm) -> str | None:
     response = llm.chat_completion(
         messages=[
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
         ],
-        max_tokens=300,
-        temperature=0.2,
+        max_tokens=250,
+        temperature=0.1,
     )
     return response.choices[0].message.content
 
@@ -145,18 +149,30 @@ def answer_question(question: str, vector_store: Chroma, llm, k: int = 3):
     context = _format_context(docs)
 
     from textwrap import dedent
-    prompt = dedent(f"""
-        Answer the question using only the context below.
-        If the context does not contain the answer, say you do not know.
+    system_prompt = dedent("""
+        You answer questions using only the provided context from the user's notes.
 
+        Rules:
+        - Give the final answer only.
+        - Do not explain how you found the answer.
+        - Do not mention "the context", "the notes", or "the question" unless citing a source.
+        - Synthesize all relevant context into one concise answer.
+        - Do not answer separately for each source.
+        - If multiple chunks contain the same fact, mention it once.
+        - Do not use outside knowledge when possible.
+        - Keep the answer to at most 4 sentences unless the question asks for steps or examples.
+        - If the context does not answer the question, reply exactly: "I don't know from the notes."
+    """).strip()
+
+    user_prompt = dedent(f"""
         Question:
         {question}
 
         Context:
         {context}
 
-        Answer:
     """).strip()
 
-    answer = _ask_llm(prompt, llm)
+    answer = _ask_llm(system_prompt, user_prompt, llm)
+
     return answer, docs

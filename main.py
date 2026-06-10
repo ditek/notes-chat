@@ -54,4 +54,5 @@ if __name__ == "__main__":
             chunk_id = doc.metadata.get("chunk_id", "?")
             start = doc.metadata.get("start", "?")
             end = doc.metadata.get("end", "?")
-            print(f"[{i}] {source} chunk {chunk_id} chars {start}-{end}")
+            print(f"[{i}] {source} chunk {chunk_id}")
+            print(f"Content:\n{doc.page_content[:200]}\n{'-'*40}")

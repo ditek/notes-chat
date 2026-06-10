@@ -28,5 +28,5 @@ if question:
             chunk_id = doc.metadata.get("chunk_id", "?")
             start = doc.metadata.get("start", "?")
             end = doc.metadata.get("end", "?")
-            st.markdown(f"- [{i}] {source} chunk {chunk_id} chars {start}-{end}")
-            st.expander(f"Content of source {i}").markdown(f"```{doc.page_content}```")
+            st.markdown(f"- [{i}] {source} chunk {chunk_id}")
+            st.expander(f"Content of source {i}").code(doc.page_content)
