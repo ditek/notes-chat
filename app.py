@@ -7,6 +7,10 @@ from rag import (
     answer_question,
 )
 
+AVATARS = {
+    "user": "👤",
+    "assistant": "📘",
+}
 
 @st.cache_resource
 def get_rag_resources():
@@ -29,7 +33,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    with st.chat_message(message["role"], avatar=AVATARS.get(message["role"], None)):
         st.markdown(message["content"])
 
         if message["role"] == "assistant" and "sources" in message:
@@ -43,15 +47,16 @@ for message in st.session_state.messages:
 
 question = st.chat_input("Ask my notes a question")
 if question:
+    chat_history = st.session_state.messages.copy()
     st.session_state.messages.append({
         "role": "user",
         "content": question,
     })
 
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=AVATARS["user"]):
         st.markdown(question)
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=AVATARS["assistant"]):
         with st.spinner("Finding the answer..."):
             vector_store, llm = get_rag_resources()
             answer, docs = answer_question(
@@ -59,6 +64,7 @@ if question:
                 vector_store,
                 llm,
                 k=k,
+                chat_history=chat_history,
             )
         st.markdown(answer)
 

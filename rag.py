@@ -144,9 +144,20 @@ def _ask_llm(system_prompt, user_prompt, llm) -> str | None:
     return response.choices[0].message.content
 
 
-def answer_question(question: str, vector_store: Chroma, llm, k: int = 3):
+def _format_chat_history(chat_history, max_messages=6):
+    recent = chat_history[-max_messages:]
+    parts = []
+    for message in recent:
+        role = message["role"]
+        content = message["content"]
+        parts.append(f"{role}: {content}")
+    return "\n".join(parts)
+
+
+def answer_question(question: str, vector_store: Chroma, llm, k: int = 3, chat_history=None):
     docs = _retrieve_context(question, vector_store, k=k)
     context = _format_context(docs)
+    chat_history_str = _format_chat_history(chat_history) if chat_history else ""
 
     from textwrap import dedent
     system_prompt = dedent("""
@@ -165,7 +176,10 @@ def answer_question(question: str, vector_store: Chroma, llm, k: int = 3):
     """).strip()
 
     user_prompt = dedent(f"""
-        Question:
+        Conversation so far:
+        {chat_history_str}
+
+        Current question:
         {question}
 
         Context:
