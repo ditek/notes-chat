@@ -43,7 +43,10 @@ for message in st.session_state.messages:
                     chunk_id = doc.metadata.get("chunk_id", "?")
 
                     st.markdown(f"- [{i}] {source} chunk {chunk_id}")
-                    st.expander(f"Content of source {i}").markdown(doc.page_content)
+                    with st.expander("Contents"):
+                        if message.get("retrieval_query"):
+                            st.text(f"Search query: {message.get('retrieval_query')}")
+                        st.markdown(doc.page_content)
 
 question = st.chat_input("Ask my notes a question")
 if question:
@@ -59,7 +62,7 @@ if question:
     with st.chat_message("assistant", avatar=AVATARS["assistant"]):
         with st.spinner("Finding the answer..."):
             vector_store, llm = get_rag_resources()
-            answer, docs = answer_question(
+            answer, docs, retrieval_query = answer_question(
                 question,
                 vector_store,
                 llm,
@@ -74,10 +77,13 @@ if question:
                 chunk_id = doc.metadata.get("chunk_id", "?")
 
                 st.markdown(f"- [{i}] {source} chunk {chunk_id}")
-                st.expander(f"Content of source {i}").markdown(doc.page_content)
+                with st.expander("Contents"):
+                    st.text(f"Search query: {retrieval_query}")
+                    st.markdown(doc.page_content)
 
     st.session_state.messages.append({
         "role": "assistant",
         "content": answer,
         "sources": docs,
+        "retrieval_query": retrieval_query,
     })

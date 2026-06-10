@@ -41,7 +41,7 @@ if __name__ == "__main__":
         embeddings = create_embeddings()
         vector_store = load_vector_store(embeddings)
         llm = create_llm()
-        answer, docs = answer_question(
+        answer, docs, _ = answer_question(
             args.question,
             vector_store,
             llm,

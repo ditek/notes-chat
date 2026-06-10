@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+from textwrap import dedent
 
 from langchain_core.documents import Document
 from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
@@ -154,12 +155,41 @@ def _format_chat_history(chat_history, max_messages=6):
     return "\n".join(parts)
 
 
+def _rewrite_question(question: str, chat_history, llm) -> str:
+    if not chat_history:
+        return question
+    chat_history_str = _format_chat_history(chat_history)
+
+    system_prompt = dedent("""
+        Rewrite the user's question to be self-contained based on the conversation history. Keep the meaning the same.
+        Rules:
+        - Use the conversation history only to resolve references like "it", "that", "this", or "they".
+        - Do not answer the question.
+        - Do not add extra explanation.
+        - Return only the rewritten question.
+    """).strip()
+    user_prompt = dedent(f"""
+        Conversation history:
+        {chat_history_str}
+
+        Current question:
+        {question}
+
+        Rewritten question:
+    """).strip()
+    rewritten = _ask_llm(system_prompt, user_prompt, llm)
+    return rewritten.strip() if rewritten else question
+
+
 def answer_question(question: str, vector_store: Chroma, llm, k: int = 3, chat_history=None):
-    docs = _retrieve_context(question, vector_store, k=k)
+    if chat_history:
+        retrieval_query = _rewrite_question(question, chat_history, llm)
+    else:
+        retrieval_query = question
+    docs = _retrieve_context(retrieval_query, vector_store, k=k)
     context = _format_context(docs)
     chat_history_str = _format_chat_history(chat_history) if chat_history else ""
 
-    from textwrap import dedent
     system_prompt = dedent("""
         You answer questions using only the provided context from the user's notes.
 
@@ -188,5 +218,4 @@ def answer_question(question: str, vector_store: Chroma, llm, k: int = 3, chat_h
     """).strip()
 
     answer = _ask_llm(system_prompt, user_prompt, llm)
-
-    return answer, docs
+    return answer, docs, retrieval_query
