@@ -7,10 +7,10 @@ Usage:
 1. To index notes (only need to do this once, or whenever notes change):
     main.py index
 2. To ask questions:
-    main.py ask "Your question here
+    main.py ask "Your question here"
 """
 
-import sys
+import argparse
 
 from rag import (
     index_notes,
@@ -21,21 +21,32 @@ from rag import (
 )
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: main.py [index|ask] [question]")
-        sys.exit(1)
-    command = sys.argv[1]
-    if command == "index":
-        index_notes('notes')
-    elif command == "ask":
-        if len(sys.argv) < 3:
-            print("Usage: main.py ask [question]")
-            sys.exit(1)
-        question = " ".join(sys.argv[2:])
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    index_parser = subparsers.add_parser("index")
+    index_parser.add_argument("--notes-dir", default="notes")
+    index_parser.add_argument("--reset", action="store_true", help="Reset the index by deleting existing vector store for the collection")
+
+    ask_parser = subparsers.add_parser("ask")
+    ask_parser.add_argument("question")
+    ask_parser.add_argument("--k", type=int, default=3)
+
+    args = parser.parse_args()
+
+    if args.command == "index":
+        index_notes(args.notes_dir, reset=args.reset)
+
+    elif args.command == "ask":
         embeddings = create_embeddings()
         vector_store = load_vector_store(embeddings)
         llm = create_llm()
-        answer, docs = answer_question(question, vector_store, llm)
+        answer, docs = answer_question(
+            args.question,
+            vector_store,
+            llm,
+            k=args.k,
+        )
         print(answer)
         print("\nSources:")
         for i, doc in enumerate(docs, start=1):
@@ -44,6 +55,3 @@ if __name__ == "__main__":
             start = doc.metadata.get("start", "?")
             end = doc.metadata.get("end", "?")
             print(f"[{i}] {source} chunk {chunk_id} chars {start}-{end}")
-    else:
-        print("Unknown command. Use: index or ask")
-        sys.exit(1)

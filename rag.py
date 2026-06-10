@@ -20,6 +20,7 @@ def _load_notes(notes_dir):
                 'content': f.read(),
                 'metadata': {'source': str(note_file)}
             })
+    print(f"Loaded {len(notes)} notes from {notes_dir}")
     return notes
 
 
@@ -29,7 +30,7 @@ def _chunk_notes(notes, chunk_size=800, chunk_overlap=150):
     chunks = []
     for note in notes:
         content = note['content']
-        print(f'Processing {note["metadata"]["source"]} with {len(content)} chars')
+        print(f'Chunking {note["metadata"]["source"]} with {len(content)} chars')
         content = note['content']
         chunk_id = 0
         step = chunk_size - chunk_overlap
@@ -61,23 +62,25 @@ def _make_documents(chunks):
     ]
 
 
-def _build_index(documents, embeddings):
-    from langchain_chroma import Chroma
+def _build_index(documents, embeddings, reset=False):
     vector_store = Chroma(
         collection_name="notes",
         embedding_function=embeddings,
         persist_directory="./chroma_db",
     )
+    if reset:
+        print("Resetting vector store collection...")
+        vector_store.reset_collection()
     vector_store.add_documents(documents)
     return vector_store
 
 
-def index_notes(notes_dir):
+def index_notes(notes_dir, reset=False):
     notes = _load_notes(notes_dir)
     chunks = _chunk_notes(notes)
     documents = _make_documents(chunks)
     embeddings = create_embeddings()
-    vector_store = _build_index(documents, embeddings)
+    vector_store = _build_index(documents, embeddings, reset=reset)
     return vector_store
 
 
