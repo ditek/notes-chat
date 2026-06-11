@@ -163,9 +163,9 @@ def _format_context(docs):
 
 
 def create_llm():
-    token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
+    token = os.getenv("HF_TOKEN")
     if not token:
-        raise RuntimeError("Missing HF_TOKEN or HUGGINGFACEHUB_API_TOKEN")
+        raise RuntimeError("Missing HF_TOKEN")
     return InferenceClient(
         model="Qwen/Qwen3-4B-Instruct-2507",
         provider="nscale",

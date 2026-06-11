@@ -17,6 +17,15 @@ AVATARS = {
     "assistant": "📘",
 }
 
+SUGGESTED_QUESTIONS = [
+    "What is an Ansible inventory?",
+    "How do I write a Cypress custom command?",
+    "How do Docker images and containers differ?",
+    "How do I create a Python virtual environment?",
+    "What are useful Linux commands for finding files?",
+]
+
+
 @st.cache_resource
 def get_rag_resources():
     embeddings = create_embeddings()
@@ -35,6 +44,7 @@ if enable_sidebar_controls:
             get_rag_resources.clear()
         if st.button("Clear chat"):
             st.session_state.messages = []
+            st.session_state.used_suggested_questions = []
         st.divider()
         st.caption(f"Notes source: `{DEFAULT_NOTES_DIR}`")
         if st.button("Sync notes from GitHub"):
@@ -49,6 +59,36 @@ if enable_sidebar_controls:
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "used_suggested_questions" not in st.session_state:
+    st.session_state.used_suggested_questions = []
+
+if "pending_question" not in st.session_state:
+    st.session_state.pending_question = None
+
+
+def select_suggested_question(suggested_question):
+    st.session_state.pending_question = suggested_question
+    if suggested_question not in st.session_state.used_suggested_questions:
+        st.session_state.used_suggested_questions.append(suggested_question)
+
+
+remaining_suggested_questions = [
+    suggested_question
+    for suggested_question in SUGGESTED_QUESTIONS
+    if suggested_question not in st.session_state.used_suggested_questions
+]
+
+if remaining_suggested_questions:
+    st.caption("Try asking:")
+    for i, suggested_question in enumerate(remaining_suggested_questions):
+        st.button(
+            suggested_question,
+            key=f"suggested-question-{i}",
+            on_click=select_suggested_question,
+            args=(suggested_question,),
+            use_container_width=True,
+        )
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar=AVATARS.get(message["role"], None)):
@@ -66,7 +106,10 @@ for message in st.session_state.messages:
                             st.text(f"Search query: {message.get('retrieval_query')}")
                         st.markdown(doc.page_content)
 
-question = st.chat_input("Ask my notes a question")
+typed_question = st.chat_input("Ask my notes a question")
+question = st.session_state.pending_question or typed_question
+st.session_state.pending_question = None
+
 if question:
     chat_history = st.session_state.messages.copy()
     st.session_state.messages.append({
