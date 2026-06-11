@@ -69,5 +69,8 @@ The app includes:
 
 ## Environment Variables
 
-- For Hugging Face Spaces, store `HF_TOKEN` as a Space secret rather than in code.
-- Keep `ENABLE_ADMIN_CONTROLS=false` for public deployments so visitors cannot sync notes or rebuild the index from the UI.
+- Set `HF_TOKEN` to allow communication with Hugging Face. Only `
+Make calls to Inference Providers` permission is needed for that.
+- Keep `ENABLE_SIDEBAR_CONTROLS=false` to hide the sidebar in public embeds.
+- Set `DEFAULT_RETRIEVAL_K` to control how many chunks are retrieved when the sidebar is hidden.
+

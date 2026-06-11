@@ -25,15 +25,16 @@ def get_rag_resources():
     return vector_store, llm
 
 
-enable_admin_controls = os.getenv("ENABLE_ADMIN_CONTROLS", "false").lower() == "true"
+enable_sidebar_controls = os.getenv("ENABLE_SIDEBAR_CONTROLS", "false").lower() == "true"
+k = int(os.getenv("DEFAULT_RETRIEVAL_K", "3"))
 
-with st.sidebar:
-    k = st.slider("Sources to retrieve", min_value=1, max_value=5, value=3)
-    if st.button("Reload index"):
-        get_rag_resources.clear()
-    if st.button("Clear chat"):
-        st.session_state.messages = []
-    if enable_admin_controls:
+if enable_sidebar_controls:
+    with st.sidebar:
+        k = st.slider("Sources to retrieve", min_value=1, max_value=5, value=k)
+        if st.button("Reload index"):
+            get_rag_resources.clear()
+        if st.button("Clear chat"):
+            st.session_state.messages = []
         st.divider()
         st.caption(f"Notes source: `{DEFAULT_NOTES_DIR}`")
         if st.button("Sync notes from GitHub"):
