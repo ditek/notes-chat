@@ -1,6 +1,11 @@
+import os
+
 import streamlit as st
 
 from rag import (
+    DEFAULT_NOTES_DIR,
+    index_notes,
+    sync_notes_from_github,
     create_embeddings,
     load_vector_store,
     create_llm,
@@ -22,12 +27,26 @@ def get_rag_resources():
 
 st.title("Notes Q&A")
 
+enable_admin_controls = os.getenv("ENABLE_ADMIN_CONTROLS", "false").lower() == "true"
+
 with st.sidebar:
     k = st.slider("Sources to retrieve", min_value=1, max_value=5, value=3)
     if st.button("Reload index"):
         get_rag_resources.clear()
     if st.button("Clear chat"):
         st.session_state.messages = []
+    if enable_admin_controls:
+        st.divider()
+        st.caption(f"Notes source: `{DEFAULT_NOTES_DIR}`")
+        if st.button("Sync notes from GitHub"):
+            with st.spinner("Downloading notes..."):
+                count = sync_notes_from_github(DEFAULT_NOTES_DIR)
+            st.success(f"Downloaded {count} notes")
+        if st.button("Rebuild index"):
+            with st.spinner("Rebuilding index..."):
+                index_notes(DEFAULT_NOTES_DIR, reset=True)
+                get_rag_resources.clear()
+            st.success("Index rebuilt")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []

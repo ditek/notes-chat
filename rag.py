@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from textwrap import dedent
 
+import requests
 from langchain_core.documents import Document
 from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
 from langchain_chroma import Chroma
@@ -11,12 +12,21 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
 
+DEFAULT_NOTES_DIR = Path(os.getenv("NOTES_DIR", "notes"))
+DEFAULT_CHROMA_DIR = os.getenv("CHROMA_DIR", "./chroma_db")
+DEFAULT_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "notes")
+NOTES_REPO_CONTENTS_URL = os.getenv(
+    "NOTES_REPO_CONTENTS_URL",
+    "https://api.github.com/repos/ditek/Notes/contents",
+)
+
 
 #################### Indexing flow ###################
 
 def _load_notes(notes_dir):
     notes = []
-    for note_file in Path(notes_dir).rglob('*.md'):
+    notes_path = Path(notes_dir)
+    for note_file in notes_path.rglob('*.md'):
         with open(note_file, 'r', encoding='utf-8') as f:
             notes.append({
                 'content': f.read(),
@@ -66,11 +76,34 @@ def _make_documents(chunks):
     ]
 
 
-def _build_index(documents, embeddings, reset=False):
+def sync_notes_from_github(notes_dir=DEFAULT_NOTES_DIR):
+    notes_path = Path(notes_dir)
+    notes_path.mkdir(parents=True, exist_ok=True)
+
+    response = requests.get(NOTES_REPO_CONTENTS_URL, timeout=30)
+    response.raise_for_status()
+
+    downloaded = 0
+    for item in response.json():
+        name = item.get("name", "")
+        download_url = item.get("download_url")
+        if not name.startswith("Notes-") or not name.endswith(".md") or not download_url:
+            continue
+
+        note_response = requests.get(download_url, timeout=30)
+        note_response.raise_for_status()
+        (notes_path / name).write_text(note_response.text, encoding="utf-8")
+        downloaded += 1
+
+    print(f"Downloaded {downloaded} note files to {notes_path}")
+    return downloaded
+
+
+def _build_index(documents, embeddings, reset=False, persist_directory=DEFAULT_CHROMA_DIR):
     vector_store = Chroma(
-        collection_name="notes",
+        collection_name=DEFAULT_COLLECTION_NAME,
         embedding_function=embeddings,
-        persist_directory="./chroma_db",
+        persist_directory=persist_directory,
     )
     if reset:
         print("Resetting vector store collection...")
@@ -79,12 +112,19 @@ def _build_index(documents, embeddings, reset=False):
     return vector_store
 
 
-def index_notes(notes_dir, reset=False):
+def index_notes(notes_dir=DEFAULT_NOTES_DIR, reset=False, persist_directory=DEFAULT_CHROMA_DIR):
     notes = _load_notes(notes_dir)
+    if not notes:
+        raise RuntimeError(f"No markdown notes found in {notes_dir}")
     chunks = _chunk_notes(notes)
     documents = _make_documents(chunks)
     embeddings = create_embeddings()
-    vector_store = _build_index(documents, embeddings, reset=reset)
+    vector_store = _build_index(
+        documents,
+        embeddings,
+        reset=reset,
+        persist_directory=persist_directory,
+    )
     return vector_store
 
 
@@ -99,8 +139,8 @@ def create_embeddings():
 
 def load_vector_store(embeddings):
     return Chroma(
-        collection_name="notes",
-        persist_directory="./chroma_db",
+        collection_name=DEFAULT_COLLECTION_NAME,
+        persist_directory=DEFAULT_CHROMA_DIR,
         embedding_function=embeddings,
     )
 

@@ -14,6 +14,7 @@ import argparse
 
 from rag import (
     index_notes,
+    sync_notes_from_github,
     create_embeddings,
     load_vector_store,
     create_llm,
@@ -28,6 +29,10 @@ if __name__ == "__main__":
     index_parser.add_argument("--notes-dir", default="notes")
     index_parser.add_argument("--reset", action="store_true", help="Reset the index by deleting existing vector store for the collection")
 
+    sync_parser = subparsers.add_parser("sync-notes")
+    sync_parser.add_argument("--notes-dir", default="notes")
+    sync_parser.add_argument("--index", action="store_true", help="Rebuild the index after syncing notes")
+
     ask_parser = subparsers.add_parser("ask")
     ask_parser.add_argument("question")
     ask_parser.add_argument("--k", type=int, default=3)
@@ -36,6 +41,12 @@ if __name__ == "__main__":
 
     if args.command == "index":
         index_notes(args.notes_dir, reset=args.reset)
+
+    elif args.command == "sync-notes":
+        count = sync_notes_from_github(args.notes_dir)
+        print(f"Synced {count} notes")
+        if args.index:
+            index_notes(args.notes_dir, reset=True)
 
     elif args.command == "ask":
         embeddings = create_embeddings()
