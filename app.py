@@ -25,8 +25,6 @@ def get_rag_resources():
     return vector_store, llm
 
 
-st.title("Notes Q&A")
-
 enable_admin_controls = os.getenv("ENABLE_ADMIN_CONTROLS", "false").lower() == "true"
 
 with st.sidebar:
