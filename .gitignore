@@ -6,3 +6,4 @@ __pycache__/
 work/chroma_notes/
 chroma_db/
 .DS_Store
+notes/
