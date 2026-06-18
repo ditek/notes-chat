@@ -15,6 +15,9 @@ load_dotenv()
 DEFAULT_NOTES_DIR = Path(os.getenv("NOTES_DIR", "notes"))
 DEFAULT_CHROMA_DIR = os.getenv("CHROMA_DIR", "./chroma_db")
 DEFAULT_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "notes")
+DEFAULT_EMBED_MODEL = os.getenv("HF_EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+DEFAULT_LLM_MODEL = os.getenv("HF_LLM_MODEL", "Qwen/Qwen3-4B-Instruct-2507")
+DEFAULT_HF_PROVIDER = os.getenv("HF_PROVIDER", "nscale")
 NOTES_REPO_CONTENTS_URL = os.getenv(
     "NOTES_REPO_CONTENTS_URL",
     "https://api.github.com/repos/ditek/Notes/contents",
@@ -100,6 +103,7 @@ def sync_notes_from_github(notes_dir=DEFAULT_NOTES_DIR):
 
 
 def _build_index(documents, embeddings, reset=False, persist_directory=DEFAULT_CHROMA_DIR):
+    Path(persist_directory).mkdir(parents=True, exist_ok=True)
     vector_store = Chroma(
         collection_name=DEFAULT_COLLECTION_NAME,
         embedding_function=embeddings,
@@ -132,12 +136,13 @@ def index_notes(notes_dir=DEFAULT_NOTES_DIR, reset=False, persist_directory=DEFA
 
 def create_embeddings():
     return HuggingFaceEndpointEmbeddings(
-        model="sentence-transformers/all-MiniLM-L6-v2",
+        model=DEFAULT_EMBED_MODEL,
         task="feature-extraction",
     )
 
 
 def load_vector_store(embeddings):
+    Path(DEFAULT_CHROMA_DIR).mkdir(parents=True, exist_ok=True)
     return Chroma(
         collection_name=DEFAULT_COLLECTION_NAME,
         persist_directory=DEFAULT_CHROMA_DIR,
@@ -167,8 +172,8 @@ def create_llm():
     if not token:
         raise RuntimeError("Missing HF_TOKEN")
     return InferenceClient(
-        model="Qwen/Qwen3-4B-Instruct-2507",
-        provider="nscale",
+        model=DEFAULT_LLM_MODEL,
+        provider=DEFAULT_HF_PROVIDER,
         api_key=token,
     )
 

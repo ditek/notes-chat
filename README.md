@@ -7,7 +7,7 @@ The current flow is:
 1. Sync markdown notes from `ditek/Notes` or use local files in `notes/`.
 2. Split notes into chunks with LangChain's text splitter.
 3. Embed chunks with Hugging Face.
-4. Store vectors locally in Chroma.
+4. Store vectors in Chroma.
 5. Retrieve relevant chunks for each question.
 6. Rewrite follow-up questions using chat history.
 7. Answer with a Hugging Face chat model.
@@ -69,8 +69,7 @@ The app includes:
 
 ## Environment Variables
 
-- Set `HF_TOKEN` to allow communication with Hugging Face. Only `
-Make calls to Inference Providers` permission is needed for that.
+- Set `HF_TOKEN` to allow communication with Hugging Face. Only `Make calls to Inference Providers` permission is needed for that.
+- Set `CHROMA_DIR=./chroma_db` for local development.
 - Keep `ENABLE_SIDEBAR_CONTROLS=false` to hide the sidebar in public embeds.
 - Set `DEFAULT_RETRIEVAL_K` to control how many chunks are retrieved when the sidebar is hidden.
-
