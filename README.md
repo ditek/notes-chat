@@ -21,7 +21,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` and set a Hugging Face token with this fine-grained permission:
+Edit `.env` and set a Hugging Face token with at least this permission:
 
 ```text
 Make calls to Inference Providers
@@ -29,7 +29,7 @@ Make calls to Inference Providers
 
 ## Sync Notes
 
-Download notes from the public Notes repo:
+Download notes a public git repo (specified in `NOTES_REPO_CONTENTS_URL`):
 
 ```bash
 python main.py sync-notes
@@ -73,3 +73,13 @@ The app includes:
 - Set `CHROMA_DIR=./chroma_db` for local development.
 - Keep `ENABLE_SIDEBAR_CONTROLS=false` to hide the sidebar in public embeds.
 - Set `DEFAULT_RETRIEVAL_K` to control how many chunks are retrieved when the sidebar is hidden.
+
+## Deployments
+
+Deployment-specific files live under `deploy/`.
+
+For deploying to Hugging Face Spaces, see:
+
+```bash
+deploy/huggingface/README.md
+```

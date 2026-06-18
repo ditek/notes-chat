@@ -18,10 +18,8 @@ DEFAULT_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "notes")
 DEFAULT_EMBED_MODEL = os.getenv("HF_EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 DEFAULT_LLM_MODEL = os.getenv("HF_LLM_MODEL", "Qwen/Qwen3-4B-Instruct-2507")
 DEFAULT_HF_PROVIDER = os.getenv("HF_PROVIDER", "nscale")
-NOTES_REPO_CONTENTS_URL = os.getenv(
-    "NOTES_REPO_CONTENTS_URL",
-    "https://api.github.com/repos/ditek/Notes/contents",
-)
+NOTES_REPO_CONTENTS_URL = os.getenv("NOTES_REPO_CONTENTS_URL")
+
 
 
 #################### Indexing flow ###################
