@@ -2,23 +2,35 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from textwrap import dedent
+from typing import cast
 
 import requests
 from langchain_core.documents import Document
 from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
 from langchain_chroma import Chroma
 from huggingface_hub import InferenceClient
+from huggingface_hub.inference._providers import PROVIDERS, PROVIDER_OR_POLICY_T
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
+
+
+def _get_hf_provider() -> PROVIDER_OR_POLICY_T:
+    provider = os.getenv("HF_PROVIDER", "nscale")
+    if provider != "auto" and provider not in PROVIDERS:
+        raise RuntimeError(
+            f"Invalid HF_PROVIDER={provider!r}"
+        )
+    return cast(PROVIDER_OR_POLICY_T, provider)
+
 
 DEFAULT_NOTES_DIR = Path(os.getenv("NOTES_DIR", "notes"))
 DEFAULT_CHROMA_DIR = os.getenv("CHROMA_DIR", "./chroma_db")
 DEFAULT_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "notes")
 DEFAULT_EMBED_MODEL = os.getenv("HF_EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 DEFAULT_LLM_MODEL = os.getenv("HF_LLM_MODEL", "Qwen/Qwen3-4B-Instruct-2507")
-DEFAULT_HF_PROVIDER = os.getenv("HF_PROVIDER", "nscale")
-NOTES_REPO_CONTENTS_URL = os.getenv("NOTES_REPO_CONTENTS_URL")
+DEFAULT_HF_PROVIDER = _get_hf_provider()
+NOTES_REPO_CONTENTS_URL = os.getenv("NOTES_REPO_CONTENTS_URL", '')
 
 
 
