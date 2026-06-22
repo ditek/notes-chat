@@ -1,6 +1,6 @@
-# Notes RAG with Hugging Face
+# Notes Chat
 
-This is a small conversational RAG app for asking questions over markdown notes.
+This is a small conversational RAG app for asking questions over text documents. I use it for my markdown notes, but it should work with any text-based documents. PDF support is in the works.
 
 The current flow is:
 
