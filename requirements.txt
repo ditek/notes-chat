@@ -8,4 +8,5 @@ python-dotenv>=1.0
 requests>=2.32
 
 streamlit
-
+fastapi>=0.115
+uvicorn[standard]>=0.30

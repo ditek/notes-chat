@@ -67,10 +67,47 @@ The app includes:
 - a `k` slider for retrieved chunks
 - buttons to sync notes, rebuild the index, reload the index, and clear chat
 
+## Run The FastAPI App
+
+```bash
+uvicorn api:app --reload --port 8000
+```
+
+Ask a question:
+
+```bash
+curl -X POST http://localhost:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What is an Ansible inventory?",
+    "k": 3,
+    "chat_history": []
+  }'
+```
+
+The response includes:
+
+- `answer`
+- `retrieval_query`
+- `sources`
+
+Admin endpoints are disabled unless `API_ADMIN_TOKEN` is set. When enabled, call them with:
+
+```bash
+Authorization: Bearer your_admin_token
+```
+
+Available admin endpoints:
+
+- `POST /admin/sync-notes`
+- `POST /admin/index`
+
 ## Environment Variables
 
 - Set `HF_TOKEN` to allow communication with Hugging Face. Only `Make calls to Inference Providers` permission is needed for that.
 - Set `CHROMA_DIR=./chroma_db` for local development.
+- Set `API_ALLOWED_ORIGINS` to a comma-separated list of browser origins allowed to call the FastAPI app. It defaults to `*`.
+- Set `API_ADMIN_TOKEN` only if you want to enable protected sync/index endpoints.
 - Keep `ENABLE_SIDEBAR_CONTROLS=false` to hide the sidebar in public embeds.
 - Set `DEFAULT_RETRIEVAL_K` to control how many chunks are retrieved when the sidebar is hidden.
 
