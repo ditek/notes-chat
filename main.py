@@ -13,12 +13,12 @@ Usage:
 import argparse
 
 from rag import (
-    index_notes,
-    sync_notes_from_github,
-    create_embeddings,
-    load_vector_store,
-    create_llm,
     answer_question,
+    create_embeddings,
+    create_llm,
+    index_notes,
+    load_vector_store,
+    sync_notes_from_github,
 )
 
 if __name__ == "__main__":
@@ -27,11 +27,17 @@ if __name__ == "__main__":
 
     index_parser = subparsers.add_parser("index")
     index_parser.add_argument("--notes-dir", default="notes")
-    index_parser.add_argument("--reset", action="store_true", help="Reset the index by deleting existing vector store for the collection")
+    index_parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Reset the index by deleting existing vector store for the collection",
+    )
 
     sync_parser = subparsers.add_parser("sync-notes")
     sync_parser.add_argument("--notes-dir", default="notes")
-    sync_parser.add_argument("--index", action="store_true", help="Rebuild the index after syncing notes")
+    sync_parser.add_argument(
+        "--index", action="store_true", help="Rebuild the index after syncing notes"
+    )
 
     ask_parser = subparsers.add_parser("ask")
     ask_parser.add_argument("question")
@@ -66,4 +72,4 @@ if __name__ == "__main__":
             start = doc.metadata.get("start", "?")
             end = doc.metadata.get("end", "?")
             print(f"[{i}] {source} chunk {chunk_id}")
-            print(f"Content:\n{doc.page_content[:200]}\n{'-'*40}")
+            print(f"Content:\n{doc.page_content[:200]}\n{'-' * 40}")

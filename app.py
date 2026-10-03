@@ -4,12 +4,12 @@ import streamlit as st
 
 from rag import (
     DEFAULT_NOTES_DIR,
-    index_notes,
-    sync_notes_from_github,
-    create_embeddings,
-    load_vector_store,
-    create_llm,
     answer_question,
+    create_embeddings,
+    create_llm,
+    index_notes,
+    load_vector_store,
+    sync_notes_from_github,
 )
 
 AVATARS = {
@@ -34,7 +34,9 @@ def get_rag_resources():
     return vector_store, llm
 
 
-enable_sidebar_controls = os.getenv("ENABLE_SIDEBAR_CONTROLS", "false").lower() == "true"
+enable_sidebar_controls = (
+    os.getenv("ENABLE_SIDEBAR_CONTROLS", "false").lower() == "true"
+)
 k = int(os.getenv("DEFAULT_RETRIEVAL_K", "3"))
 
 if enable_sidebar_controls:
@@ -112,10 +114,12 @@ st.session_state.pending_question = None
 
 if question:
     chat_history = st.session_state.messages.copy()
-    st.session_state.messages.append({
-        "role": "user",
-        "content": question,
-    })
+    st.session_state.messages.append(
+        {
+            "role": "user",
+            "content": question,
+        }
+    )
 
     with st.chat_message("user", avatar=AVATARS["user"]):
         st.markdown(question)
@@ -142,9 +146,11 @@ if question:
                     st.text(f"Search query: {retrieval_query}")
                     st.markdown(doc.page_content)
 
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": answer,
-        "sources": docs,
-        "retrieval_query": retrieval_query,
-    })
+    st.session_state.messages.append(
+        {
+            "role": "assistant",
+            "content": answer,
+            "sources": docs,
+            "retrieval_query": retrieval_query,
+        }
+    )
