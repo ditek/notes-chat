@@ -1,0 +1,18 @@
+minimum_pre_commit_version: "4.4.0"
+
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Ruff lint check
+        entry: uv run --locked --only-dev ruff check --no-fix --force-exclude
+        language: unsupported
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: ruff-format
+        name: Ruff format check
+        entry: uv run --locked --only-dev ruff format --check --force-exclude
+        language: unsupported
+        types_or: [python, pyi]
+        require_serial: true
