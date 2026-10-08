@@ -1,15 +1,15 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 from textwrap import dedent
 from typing import cast
 
 import requests
+from dotenv import load_dotenv
+from huggingface_hub import InferenceClient
+from huggingface_hub.inference._providers import PROVIDER_OR_POLICY_T, PROVIDERS
+from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
-from langchain_chroma import Chroma
-from huggingface_hub import InferenceClient
-from huggingface_hub.inference._providers import PROVIDERS, PROVIDER_OR_POLICY_T
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
@@ -18,33 +18,30 @@ load_dotenv()
 def _get_hf_provider() -> PROVIDER_OR_POLICY_T:
     provider = os.getenv("HF_PROVIDER", "nscale")
     if provider != "auto" and provider not in PROVIDERS:
-        raise RuntimeError(
-            f"Invalid HF_PROVIDER={provider!r}"
-        )
+        raise RuntimeError(f"Invalid HF_PROVIDER={provider!r}")
     return cast(PROVIDER_OR_POLICY_T, provider)
 
 
 DEFAULT_NOTES_DIR = Path(os.getenv("NOTES_DIR", "notes"))
 DEFAULT_CHROMA_DIR = os.getenv("CHROMA_DIR", "./chroma_db")
 DEFAULT_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "notes")
-DEFAULT_EMBED_MODEL = os.getenv("HF_EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+DEFAULT_EMBED_MODEL = os.getenv(
+    "HF_EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
+)
 DEFAULT_LLM_MODEL = os.getenv("HF_LLM_MODEL", "Qwen/Qwen3-4B-Instruct-2507")
 DEFAULT_HF_PROVIDER = _get_hf_provider()
-NOTES_REPO_CONTENTS_URL = os.getenv("NOTES_REPO_CONTENTS_URL", '')
-
+NOTES_REPO_CONTENTS_URL = os.getenv("NOTES_REPO_CONTENTS_URL", "")
 
 
 #################### Indexing flow ###################
 
+
 def _load_notes(notes_dir):
     notes = []
     notes_path = Path(notes_dir)
-    for note_file in notes_path.rglob('*.md'):
-        with open(note_file, 'r', encoding='utf-8') as f:
-            notes.append({
-                'content': f.read(),
-                'metadata': {'source': str(note_file)}
-            })
+    for note_file in notes_path.rglob("*.md"):
+        with open(note_file, "r", encoding="utf-8") as f:
+            notes.append({"content": f.read(), "metadata": {"source": str(note_file)}})
     print(f"Loaded {len(notes)} notes from {notes_dir}")
     return notes
 
@@ -69,23 +66,23 @@ def _chunk_notes(notes, chunk_size=500, chunk_overlap=50):
         print(f"Chunking {source} with {len(content)} chars")
         split_texts = splitter.split_text(content)
         for chunk_id, chunk_text in enumerate(split_texts):
-            chunks.append({
-                "content": chunk_text,
-                "metadata": {
-                    "source": source,
-                    "chunk_id": chunk_id,
-                },
-            })
+            chunks.append(
+                {
+                    "content": chunk_text,
+                    "metadata": {
+                        "source": source,
+                        "chunk_id": chunk_id,
+                    },
+                }
+            )
             print(f"\tchunk {chunk_id}: {len(chunk_text)} chars")
     return chunks
 
 
 def _make_documents(chunks):
     return [
-        Document(
-            page_content=chunk['content'],
-            metadata=chunk['metadata']
-        ) for chunk in chunks
+        Document(page_content=chunk["content"], metadata=chunk["metadata"])
+        for chunk in chunks
     ]
 
 
@@ -100,7 +97,11 @@ def sync_notes_from_github(notes_dir=DEFAULT_NOTES_DIR):
     for item in response.json():
         name = item.get("name", "")
         download_url = item.get("download_url")
-        if not name.startswith("Notes-") or not name.endswith(".md") or not download_url:
+        if (
+            not name.startswith("Notes-")
+            or not name.endswith(".md")
+            or not download_url
+        ):
             continue
 
         note_response = requests.get(download_url, timeout=30)
@@ -112,7 +113,9 @@ def sync_notes_from_github(notes_dir=DEFAULT_NOTES_DIR):
     return downloaded
 
 
-def _build_index(documents, embeddings, reset=False, persist_directory=DEFAULT_CHROMA_DIR):
+def _build_index(
+    documents, embeddings, reset=False, persist_directory=DEFAULT_CHROMA_DIR
+):
     Path(persist_directory).mkdir(parents=True, exist_ok=True)
     vector_store = Chroma(
         collection_name=DEFAULT_COLLECTION_NAME,
@@ -126,7 +129,9 @@ def _build_index(documents, embeddings, reset=False, persist_directory=DEFAULT_C
     return vector_store
 
 
-def index_notes(notes_dir=DEFAULT_NOTES_DIR, reset=False, persist_directory=DEFAULT_CHROMA_DIR):
+def index_notes(
+    notes_dir=DEFAULT_NOTES_DIR, reset=False, persist_directory=DEFAULT_CHROMA_DIR
+):
     notes = _load_notes(notes_dir)
     if not notes:
         raise RuntimeError(f"No markdown notes found in {notes_dir}")
@@ -143,6 +148,7 @@ def index_notes(notes_dir=DEFAULT_NOTES_DIR, reset=False, persist_directory=DEFA
 
 
 ################### Asking flow ###################
+
 
 def create_embeddings():
     return HuggingFaceEndpointEmbeddings(
@@ -171,8 +177,7 @@ def _format_context(docs):
         chunk_id = doc.metadata["chunk_id"]
 
         context_parts.append(
-            f"[{i}] Source: {source}, chunk {chunk_id}\n"
-            f"{doc.page_content}"
+            f"[{i}] Source: {source}, chunk {chunk_id}\n{doc.page_content}"
         )
     return "\n\n".join(context_parts)
 
@@ -192,7 +197,7 @@ def _ask_llm(system_prompt, user_prompt, llm) -> str | None:
     response = llm.chat_completion(
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
+            {"role": "user", "content": user_prompt},
         ],
         max_tokens=250,
         temperature=0.1,
@@ -236,7 +241,9 @@ def _rewrite_question(question: str, chat_history, llm) -> str:
     return rewritten.strip() if rewritten else question
 
 
-def answer_question(question: str, vector_store: Chroma, llm, k: int = 3, chat_history=None):
+def answer_question(
+    question: str, vector_store: Chroma, llm, k: int = 3, chat_history=None
+):
     if chat_history:
         retrieval_query = _rewrite_question(question, chat_history, llm)
     else:

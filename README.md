@@ -13,11 +13,11 @@ The current flow is:
 7. Answer with a Hugging Face chat model.
 
 ## Setup
+After cloning, run these commands.
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+uv sync --locked
+uv run pre-commit install
 cp .env.example .env
 ```
 
@@ -32,31 +32,31 @@ Make calls to Inference Providers
 Download notes a public git repo (specified in `NOTES_REPO_CONTENTS_URL`):
 
 ```bash
-python main.py sync-notes
+uv run main.py sync-notes
 ```
 
 Download and rebuild the vector index:
 
 ```bash
-python main.py sync-notes --index
+uv run main.py sync-notes --index
 ```
 
 You can also index whatever markdown files are already in `notes/`:
 
 ```bash
-python main.py index --reset
+uv run main.py index --reset
 ```
 
 ## Ask From The CLI
 
 ```bash
-python main.py ask "What is an Ansible inventory?" --k 3
+uv run main.py ask "What is an Ansible inventory?" --k 3
 ```
 
 ## Run The Streamlit App
 
 ```bash
-streamlit run app.py
+uv run streamlit run app.py
 ```
 
 The app includes:
@@ -70,7 +70,7 @@ The app includes:
 ## Run The FastAPI App
 
 ```bash
-uvicorn api:app --reload --port 8000
+uv run uvicorn api:app --reload --port 8000
 ```
 
 Ask a question:

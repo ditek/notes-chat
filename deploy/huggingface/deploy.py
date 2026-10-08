@@ -8,7 +8,6 @@ import tarfile
 import tempfile
 from pathlib import Path
 
-
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 
@@ -54,7 +53,7 @@ def git_auth_env(target_dir):
     askpass_path = target_dir / ".git" / "hf-askpass.sh"
     askpass_path.write_text(
         "#!/bin/sh\n"
-        "case \"$1\" in\n"
+        'case "$1" in\n'
         "*Username*) printf '%s\\n' \"$HF_DEPLOY_USERNAME\" ;;\n"
         "*) printf '%s\\n' \"$HF_DEPLOY_TOKEN\" ;;\n"
         "esac\n",
