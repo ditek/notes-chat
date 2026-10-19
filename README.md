@@ -1,5 +1,7 @@
 # Notes Chat
 
+[![Code checks](https://github.com/ditek/notes-chat/actions/workflows/ruff-check.yaml/badge.svg)](https://github.com/ditek/notes-chat/actions/workflows/ruff-check.yaml)
+
 This is a small conversational RAG app for asking questions over text documents. I use it for my markdown notes, but it should work with any text-based documents. PDF support is in the works.
 
 The current flow is:
