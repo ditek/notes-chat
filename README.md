@@ -1,18 +1,35 @@
-# Notes Chat
+# Chatty Notes
 
 [![Code checks](https://github.com/ditek/notes-chat/actions/workflows/ruff-check.yaml/badge.svg)](https://github.com/ditek/notes-chat/actions/workflows/ruff-check.yaml)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-blue?style=flat-square)](https://diaa.dev/notes)
 
-This is a small conversational RAG app for asking questions over text documents. I use it for my markdown notes, but it should work with any text-based documents. PDF support is in the works.
+Chatty Notes is a conversational Retrieval-Augmented Generation (RAG) application for querying text documents using natural language. I use it for my markdown notes, but it works with any text-based documents. PDF support is planned.
+
+It combines semantic search with an LLM to retrieve relevant information, generate context-aware answers, and expose the source passages used.
+
+<img src="docs/example-card.svg" alt="application architecture" width="720">
+
+## Key Features
+
+- **Conversational retrieval:** Rewrites follow-up questions into standalone search queries using conversation history.
+- **Semantic search:** Uses Hugging Face embeddings and Chroma for similarity-based retrieval.
+- **Document indexing:** Splits documents into overlapping chunks with source metadata.
+- **Grounded generation:** Instructs the LLM to answer using retrieved context and acknowledge missing information.
+- **Source inspection:** Displays retrieved passages, filenames, chunk IDs, and retrieval queries.
+- **Multiple interfaces:** Provides a Streamlit UI, FastAPI endpoints, and CLI access.
+
+## Operation
+<img src="docs/architecture.svg" alt="application architecture" width="720">
 
 The current flow is:
 
-1. Sync markdown notes from `ditek/Notes` or use local files in `notes/`.
+1. Sync markdown notes from `github.com/ditek/Notes` (can be changed in the `.env` file) or use local files in `notes/`.
 2. Split notes into chunks with LangChain's text splitter.
-3. Embed chunks with Hugging Face.
+3. Embed chunks with `all-MiniLM-L6-v2`.
 4. Store vectors in Chroma.
-5. Retrieve relevant chunks for each question.
+5. Retrieve relevant chunks for each question with top-k similarity retrieval.
 6. Rewrite follow-up questions using chat history.
-7. Answer with a Hugging Face chat model.
+7. Generate answer with an appropriate LLM (currently using Qwen3-4B).
 
 ## Setup
 After cloning, run these commands.
@@ -29,9 +46,10 @@ Edit `.env` and set a Hugging Face token with at least this permission:
 Make calls to Inference Providers
 ```
 
-## Sync Notes
+## Usage
+### Sync Notes
 
-Download notes a public git repo (specified in `NOTES_REPO_CONTENTS_URL`):
+Download notes from a public git repo (specified in `NOTES_REPO_CONTENTS_URL`):
 
 ```bash
 uv run main.py sync-notes
@@ -49,13 +67,13 @@ You can also index whatever markdown files are already in `notes/`:
 uv run main.py index --reset
 ```
 
-## Ask From The CLI
+### Ask From The CLI
 
 ```bash
 uv run main.py ask "What is an Ansible inventory?" --k 3
 ```
 
-## Run The Streamlit App
+### Run The Streamlit App
 
 ```bash
 uv run streamlit run app.py
@@ -69,7 +87,7 @@ The app includes:
 - a `k` slider for retrieved chunks
 - buttons to sync notes, rebuild the index, reload the index, and clear chat
 
-## Run The FastAPI App
+### Run The FastAPI App
 
 ```bash
 uv run uvicorn api:app --reload --port 8000
@@ -104,7 +122,7 @@ Available admin endpoints:
 - `POST /admin/sync-notes`
 - `POST /admin/index`
 
-## Environment Variables
+### Environment Variables
 
 - Set `HF_TOKEN` to allow communication with Hugging Face. Only `Make calls to Inference Providers` permission is needed for that.
 - Set `CHROMA_DIR=./chroma_db` for local development.
@@ -113,7 +131,7 @@ Available admin endpoints:
 - Keep `ENABLE_SIDEBAR_CONTROLS=false` to hide the sidebar in public embeds.
 - Set `DEFAULT_RETRIEVAL_K` to control how many chunks are retrieved when the sidebar is hidden.
 
-## Deployments
+### Deployments
 
 Deployment-specific files live under `deploy/`.
 
