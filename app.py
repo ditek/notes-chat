@@ -26,7 +26,7 @@ SUGGESTED_QUESTIONS = [
 ]
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def get_rag_resources():
     llm = create_llm()
     embeddings = create_embeddings()

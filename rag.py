@@ -21,7 +21,7 @@ DEFAULT_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "notes")
 DEFAULT_EMBED_MODEL = os.getenv(
     "HF_EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
 )
-DEFAULT_LLM_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemma-4-31b-it:free")
+DEFAULT_LLM_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
 NOTES_REPO_CONTENTS_URL = os.getenv("NOTES_REPO_CONTENTS_URL", "")
 _EMBEDDINGS_LOCK = Lock()
 
@@ -194,11 +194,11 @@ def _format_context(docs):
 
 
 def create_llm():
-    token = os.getenv("OPENROUTER_API_KEY", "").strip()
+    token = os.getenv("GROQ_API_KEY", "").strip()
     if not token:
-        raise RuntimeError("Missing OPENROUTER_API_KEY")
+        raise RuntimeError("Missing GROQ_API_KEY")
     return OpenAI(
-        base_url="https://openrouter.ai/api/v1",
+        base_url="https://api.groq.com/openai/v1",
         api_key=token,
         timeout=45.0,
         max_retries=0,
@@ -215,33 +215,31 @@ def _ask_llm(system_prompt, user_prompt, llm) -> str:
             ],
             max_tokens=250,
             temperature=0.1,
-            extra_body={
-                "provider": {"max_price": {"prompt": 0, "completion": 0, "request": 0}},
-            },
+            reasoning_effort="none",
         )
     except APIStatusError as exc:
         messages = {
-            401: "OpenRouter rejected the API key. Check OPENROUTER_API_KEY.",
-            402: "OpenRouter denied access to this model. Check account access to free models.",
-            403: "OpenRouter denied access to this model. Check account access to free models.",
-            404: "OpenRouter model is unavailable. Check OPENROUTER_MODEL.",
-            429: "OpenRouter rate limit reached. Please retry later.",
+            401: "Groq rejected the API key. Check GROQ_API_KEY.",
+            402: "Groq denied access to this model. Check account access to the configured model.",
+            403: "Groq denied access to this model. Check account access to the configured model.",
+            404: "Groq model is unavailable. Check GROQ_MODEL.",
+            429: "Groq rate limit reached. Please retry later.",
         }
         raise RuntimeError(
             messages.get(
                 exc.status_code,
-                "OpenRouter request failed. Retry later or check OPENROUTER_MODEL.",
+                "Groq request failed. Retry later or check GROQ_MODEL.",
             )
         ) from exc
     except APIConnectionError as exc:
-        raise RuntimeError("Could not reach OpenRouter. Please retry later.") from exc
+        raise RuntimeError("Could not reach Groq. Please retry later.") from exc
     except APIError as exc:
         raise RuntimeError(
-            "OpenRouter returned an invalid response. Please retry later."
+            "Groq returned an invalid response. Please retry later."
         ) from exc
     answer = response.choices[0].message.content if response.choices else None
     if not answer or not answer.strip():
-        raise RuntimeError("OpenRouter returned no answer. Please retry later.")
+        raise RuntimeError("Groq returned no answer. Please retry later.")
     return answer
 
 

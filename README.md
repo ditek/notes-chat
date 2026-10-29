@@ -29,7 +29,7 @@ The current flow is:
 4. Store vectors in Chroma.
 5. Rewrite follow-up questions using chat history.
 6. Retrieve relevant chunks with top-k similarity retrieval.
-7. Generate an answer through OpenRouter (default: `google/gemma-4-31b-it:free`).
+7. Generate an answer through Groq (default: `qwen/qwen3.8-27b`).
 
 ## Setup
 After cloning, run these commands.
@@ -40,11 +40,11 @@ uv run pre-commit install
 cp .env.example .env
 ```
 
-Edit `.env` and set your OpenRouter API key and chat model:
+Edit `.env` and set your Groq API key and chat model:
 
 ```text
-OPENROUTER_API_KEY=your_openrouter_key_here
-OPENROUTER_MODEL=google/gemma-4-31b-it:free
+GROQ_API_KEY=your_groq_key_here
+GROQ_MODEL=qwen/qwen3.8-27b
 ```
 
 ## Usage
@@ -62,8 +62,7 @@ Download and rebuild the vector index:
 uv run main.py sync-notes --index
 ```
 
-`sync-notes --index` replaces vectors in the selected Chroma collection. Back up
-an existing index before rebuilding it; markdown files are retained.
+`sync-notes --index` replaces vectors in the selected Chroma collection. Back up an existing index before rebuilding it.
 
 You can also index whatever markdown files are already in `notes/`:
 
@@ -134,8 +133,8 @@ Available admin endpoints:
 
 ### Environment Variables
 
-- Set `OPENROUTER_API_KEY` for question rewriting and answer generation. Indexing does not require it.
-- Set `OPENROUTER_MODEL` to select the chat model (default: `google/gemma-4-31b-it:free`).
+- Set `GROQ_API_KEY` for question rewriting and answer generation. Indexing does not require it.
+- Set `GROQ_MODEL` to select the chat model (default: `qwen/qwen3.8-27b`).
 - Set `HF_EMBED_MODEL` to select the local CPU embedding model (default: `sentence-transformers/all-MiniLM-L6-v2`).
 - Set `HF_HOME` if you need a different writable model cache location.
 - Set `CHROMA_DIR=./chroma_db` for local development.
@@ -150,9 +149,10 @@ Available admin endpoints:
 Deployment-specific files live under `deploy/`.
 
 On Hugging Face Spaces, keep the Docker SDK and select CPU Basic hardware. Set
-`OPENROUTER_API_KEY` as a **Space secret**, and `OPENROUTER_MODEL`, `HF_EMBED_MODEL`,
+`GROQ_API_KEY` as a **Space secret**, and `GROQ_MODEL`, `HF_EMBED_MODEL`,
 and `CHROMA_COLLECTION` as **Space variables**. Existing HF Git credentials or
 `HF_DEPLOY_TOKEN` are still used separately for deployment.
+Switching the chat provider does not require rebuilding the Chroma index.
 
 The Docker image caches the default MiniLM model during build. Its default notes,
 Chroma, and model-cache directories are writable. Set `CHROMA_DIR=/data/chroma_db`
@@ -167,5 +167,5 @@ See the [Hugging Face deployment guide](deploy/huggingface/README.md) for the de
 uv run --locked python -m unittest discover -s tests -v
 ```
 
-Tests mock model loading and OpenRouter calls, and use temporary Chroma databases.
+Tests mock model loading and Groq calls, and use temporary Chroma databases.
 They require no API keys or model downloads and consume no generation credits.
