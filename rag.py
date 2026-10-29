@@ -1,25 +1,18 @@
 import os
+from functools import lru_cache
 from pathlib import Path
 from textwrap import dedent
-from typing import cast
+from threading import Lock
 
 import requests
 from dotenv import load_dotenv
-from huggingface_hub import InferenceClient
-from huggingface_hub.inference._providers import PROVIDER_OR_POLICY_T, PROVIDERS
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
-from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from openai import APIConnectionError, APIError, APIStatusError, OpenAI
 
 load_dotenv()
-
-
-def _get_hf_provider() -> PROVIDER_OR_POLICY_T:
-    provider = os.getenv("HF_PROVIDER", "nscale")
-    if provider != "auto" and provider not in PROVIDERS:
-        raise RuntimeError(f"Invalid HF_PROVIDER={provider!r}")
-    return cast(PROVIDER_OR_POLICY_T, provider)
 
 
 DEFAULT_NOTES_DIR = Path(os.getenv("NOTES_DIR", "notes"))
@@ -28,9 +21,9 @@ DEFAULT_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "notes")
 DEFAULT_EMBED_MODEL = os.getenv(
     "HF_EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
 )
-DEFAULT_LLM_MODEL = os.getenv("HF_LLM_MODEL", "Qwen/Qwen3-4B-Instruct-2507")
-DEFAULT_HF_PROVIDER = _get_hf_provider()
+DEFAULT_LLM_MODEL = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
 NOTES_REPO_CONTENTS_URL = os.getenv("NOTES_REPO_CONTENTS_URL", "")
+_EMBEDDINGS_LOCK = Lock()
 
 
 #################### Indexing flow ###################
@@ -116,15 +109,7 @@ def sync_notes_from_github(notes_dir=DEFAULT_NOTES_DIR):
 def _build_index(
     documents, embeddings, reset=False, persist_directory=DEFAULT_CHROMA_DIR
 ):
-    Path(persist_directory).mkdir(parents=True, exist_ok=True)
-    vector_store = Chroma(
-        collection_name=DEFAULT_COLLECTION_NAME,
-        embedding_function=embeddings,
-        persist_directory=persist_directory,
-    )
-    if reset:
-        print("Resetting vector store collection...")
-        vector_store.reset_collection()
+    vector_store = _open_vector_store(embeddings, persist_directory, reset=reset)
     vector_store.add_documents(documents)
     return vector_store
 
@@ -150,20 +135,46 @@ def index_notes(
 ################### Asking flow ###################
 
 
-def create_embeddings():
-    return HuggingFaceEndpointEmbeddings(
-        model=DEFAULT_EMBED_MODEL,
-        task="feature-extraction",
+@lru_cache(maxsize=1)
+def _cached_embeddings():
+    return HuggingFaceEmbeddings(
+        model_name=DEFAULT_EMBED_MODEL,
+        model_kwargs={"device": "cpu"},
     )
+
+
+def create_embeddings():
+    # Prevent concurrent first requests from loading multiple copies of the model.
+    with _EMBEDDINGS_LOCK:
+        return _cached_embeddings()
+
+
+def _open_vector_store(embeddings, persist_directory, reset=False):
+    Path(persist_directory).mkdir(parents=True, exist_ok=True)
+    configuration = f"local-cpu-v1:{embeddings.model_name}"
+    metadata_key = "notes_chat_embeddings"
+    vector_store = Chroma(
+        collection_name=DEFAULT_COLLECTION_NAME,
+        persist_directory=str(persist_directory),
+        embedding_function=embeddings,
+        collection_metadata={metadata_key: configuration},
+    )
+    if reset:
+        vector_store.reset_collection()
+    collection = vector_store._collection
+    metadata = collection.metadata or {}
+    if metadata.get(metadata_key) != configuration:
+        if collection.count():
+            raise RuntimeError(
+                "Chroma contains incompatible embeddings."
+                "Set CHROMA_COLLECTION to an unused name and run `index` or use --reset"
+            )
+        collection.modify(metadata={**metadata, metadata_key: configuration})
+    return vector_store
 
 
 def load_vector_store(embeddings):
-    Path(DEFAULT_CHROMA_DIR).mkdir(parents=True, exist_ok=True)
-    return Chroma(
-        collection_name=DEFAULT_COLLECTION_NAME,
-        persist_directory=DEFAULT_CHROMA_DIR,
-        embedding_function=embeddings,
-    )
+    return _open_vector_store(embeddings, DEFAULT_CHROMA_DIR)
 
 
 def _retrieve_context(question: str, vector_store: Chroma, k=3):
@@ -183,26 +194,53 @@ def _format_context(docs):
 
 
 def create_llm():
-    token = os.getenv("HF_TOKEN")
+    token = os.getenv("GROQ_API_KEY", "").strip()
     if not token:
-        raise RuntimeError("Missing HF_TOKEN")
-    return InferenceClient(
-        model=DEFAULT_LLM_MODEL,
-        provider=DEFAULT_HF_PROVIDER,
+        raise RuntimeError("Missing GROQ_API_KEY")
+    return OpenAI(
+        base_url="https://api.groq.com/openai/v1",
         api_key=token,
+        timeout=45.0,
+        max_retries=0,
     )
 
 
-def _ask_llm(system_prompt, user_prompt, llm) -> str | None:
-    response = llm.chat_completion(
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        max_tokens=250,
-        temperature=0.1,
-    )
-    return response.choices[0].message.content
+def _ask_llm(system_prompt, user_prompt, llm) -> str:
+    try:
+        response = llm.chat.completions.create(
+            model=DEFAULT_LLM_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=250,
+            temperature=0.1,
+            reasoning_effort="none",
+        )
+    except APIStatusError as exc:
+        messages = {
+            401: "Groq rejected the API key. Check GROQ_API_KEY.",
+            402: "Groq denied access to this model. Check account access to the configured model.",
+            403: "Groq denied access to this model. Check account access to the configured model.",
+            404: "Groq model is unavailable. Check GROQ_MODEL.",
+            429: "Groq rate limit reached. Please retry later.",
+        }
+        raise RuntimeError(
+            messages.get(
+                exc.status_code,
+                "Groq request failed. Retry later or check GROQ_MODEL.",
+            )
+        ) from exc
+    except APIConnectionError as exc:
+        raise RuntimeError("Could not reach Groq. Please retry later.") from exc
+    except APIError as exc:
+        raise RuntimeError(
+            "Groq returned an invalid response. Please retry later."
+        ) from exc
+    answer = response.choices[0].message.content if response.choices else None
+    if not answer or not answer.strip():
+        raise RuntimeError("Groq returned no answer. Please retry later.")
+    return answer
 
 
 def _format_chat_history(chat_history, max_messages=6):

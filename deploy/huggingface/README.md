@@ -40,6 +40,9 @@ When `HF_SPACE_REMOTE_URL` is set, the deploy script automatically uses this env
 
 ## Space Setup
 
+Set `GROQ_API_KEY` as a **Space secret** and `GROQ_MODEL=qwen/qwen3.8-27b` as a
+**Space variable**.
+
 The Space should use persistent storage for Chroma. Mount a Storage Bucket at:
 
 ```text
@@ -54,7 +57,8 @@ CHROMA_DIR=/data/chroma_db
 
 ## Deploy
 
-From the repo root:
+Commit the reviewed changes first; deployment exports the current commit and
+does not include uncommitted edits. From the repo root:
 
 ```bash
 python deploy/huggingface/deploy.py

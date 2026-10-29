@@ -4,6 +4,7 @@ from typing import Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from rag import (
@@ -23,6 +24,14 @@ def _allowed_origins():
 
 
 app = FastAPI(title="Notes Chat API")
+
+
+@app.exception_handler(RuntimeError)
+async def handle_rag_error(request, exc):
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": str(exc)}
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,9 +78,9 @@ class SyncNotesRequest(BaseModel):
 
 @lru_cache(maxsize=1)
 def get_rag_resources():
+    llm = create_llm()
     embeddings = create_embeddings()
     vector_store = load_vector_store(embeddings)
-    llm = create_llm()
     return vector_store, llm
 
 
