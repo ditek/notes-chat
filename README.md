@@ -12,7 +12,7 @@ It combines semantic search with an LLM to retrieve relevant information, genera
 ## Key Features
 
 - **Conversational retrieval:** Rewrites follow-up questions into standalone search queries using conversation history.
-- **Semantic search:** Uses Hugging Face embeddings and Chroma for similarity-based retrieval.
+- **Semantic search:** Runs Sentence Transformers embeddings locally on CPU and stores vectors in Chroma.
 - **Document indexing:** Splits documents into overlapping chunks with source metadata.
 - **Grounded generation:** Instructs the LLM to answer using retrieved context and acknowledge missing information.
 - **Source inspection:** Displays retrieved passages, filenames, chunk IDs, and retrieval queries.
@@ -25,11 +25,11 @@ The current flow is:
 
 1. Sync markdown notes from `github.com/ditek/Notes` (can be changed in the `.env` file) or use local files in `notes/`.
 2. Split notes into chunks with LangChain's text splitter.
-3. Embed chunks with `all-MiniLM-L6-v2`.
+3. Embed chunks locally on CPU with `sentence-transformers/all-MiniLM-L6-v2`.
 4. Store vectors in Chroma.
-5. Retrieve relevant chunks for each question with top-k similarity retrieval.
-6. Rewrite follow-up questions using chat history.
-7. Generate answer with an appropriate LLM (currently using Qwen3-4B).
+5. Rewrite follow-up questions using chat history.
+6. Retrieve relevant chunks with top-k similarity retrieval.
+7. Generate an answer through OpenRouter (default: `google/gemma-4-31b-it:free`).
 
 ## Setup
 After cloning, run these commands.
@@ -40,10 +40,11 @@ uv run pre-commit install
 cp .env.example .env
 ```
 
-Edit `.env` and set a Hugging Face token with at least this permission:
+Edit `.env` and set your OpenRouter API key and chat model:
 
 ```text
-Make calls to Inference Providers
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENROUTER_MODEL=google/gemma-4-31b-it:free
 ```
 
 ## Usage
@@ -61,11 +62,17 @@ Download and rebuild the vector index:
 uv run main.py sync-notes --index
 ```
 
+`sync-notes --index` replaces vectors in the selected Chroma collection. Back up
+an existing index before rebuilding it; markdown files are retained.
+
 You can also index whatever markdown files are already in `notes/`:
 
 ```bash
-uv run main.py index --reset
+uv run main.py index
 ```
+
+Indexing without `--reset` appends chunks. Use `--reset` for a full rebuild after
+backing up the index.
 
 ### Ask From The CLI
 
@@ -86,6 +93,9 @@ The app includes:
 - source chunk display
 - a `k` slider for retrieved chunks
 - buttons to sync notes, rebuild the index, reload the index, and clear chat
+
+Sidebar controls appear when `ENABLE_SIDEBAR_CONTROLS=true`. The **Rebuild index**
+button replaces vectors in the selected collection, so back up existing data first.
 
 ### Run The FastAPI App
 
@@ -124,8 +134,12 @@ Available admin endpoints:
 
 ### Environment Variables
 
-- Set `HF_TOKEN` to allow communication with Hugging Face. Only `Make calls to Inference Providers` permission is needed for that.
+- Set `OPENROUTER_API_KEY` for question rewriting and answer generation. Indexing does not require it.
+- Set `OPENROUTER_MODEL` to select the chat model (default: `google/gemma-4-31b-it:free`).
+- Set `HF_EMBED_MODEL` to select the local CPU embedding model (default: `sentence-transformers/all-MiniLM-L6-v2`).
+- Set `HF_HOME` if you need a different writable model cache location.
 - Set `CHROMA_DIR=./chroma_db` for local development.
+- Set `CHROMA_COLLECTION` to select the collection to build and query (default: `notes`).
 - Set `API_ALLOWED_ORIGINS` to a comma-separated list of browser origins allowed to call the FastAPI app. It defaults to `*`.
 - Set `API_ADMIN_TOKEN` only if you want to enable protected sync/index endpoints.
 - Keep `ENABLE_SIDEBAR_CONTROLS=false` to hide the sidebar in public embeds.
@@ -135,8 +149,23 @@ Available admin endpoints:
 
 Deployment-specific files live under `deploy/`.
 
-For deploying to Hugging Face Spaces, see:
+On Hugging Face Spaces, keep the Docker SDK and select CPU Basic hardware. Set
+`OPENROUTER_API_KEY` as a **Space secret**, and `OPENROUTER_MODEL`, `HF_EMBED_MODEL`,
+and `CHROMA_COLLECTION` as **Space variables**. Existing HF Git credentials or
+`HF_DEPLOY_TOKEN` are still used separately for deployment.
+
+The Docker image caches the default MiniLM model during build. Its default notes,
+Chroma, and model-cache directories are writable. Set `CHROMA_DIR=/data/chroma_db`
+only when writable persistent storage is mounted at `/data`. Without persistent
+storage, resync downloaded notes and rebuild the index after container restarts.
+
+See the [Hugging Face deployment guide](deploy/huggingface/README.md) for the deploy commands.
+
+### Tests
 
 ```bash
-deploy/huggingface/README.md
+uv run --locked python -m unittest discover -s tests -v
 ```
+
+Tests mock model loading and OpenRouter calls, and use temporary Chroma databases.
+They require no API keys or model downloads and consume no generation credits.
