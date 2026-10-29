@@ -15,8 +15,9 @@ ENV HOME=/home/user \
 WORKDIR /home/user/app
 
 COPY requirements.txt .
-# Install CPU wheels first to avoid downloading CUDA libraries.
-RUN pip install --no-cache-dir 'torch>=2.2' --index-url https://download.pytorch.org/whl/cpu \
+# Install only Torch from the CPU index; resolve dependencies from PyPI below.
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir --no-deps 'torch>=2.2' --index-url https://download.pytorch.org/whl/cpu \
     && pip install --no-cache-dir -r requirements.txt
 
 USER user
