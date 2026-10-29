@@ -12,7 +12,7 @@ It combines semantic search with an LLM to retrieve relevant information, genera
 ## Key Features
 
 - **Conversational retrieval:** Rewrites follow-up questions into standalone search queries using conversation history.
-- **Semantic search:** Uses Hugging Face embeddings and Chroma for similarity-based retrieval.
+- **Semantic search:** Runs Sentence Transformers embeddings locally on CPU and stores them in Chroma.
 - **Document indexing:** Splits documents into overlapping chunks with source metadata.
 - **Grounded generation:** Instructs the LLM to answer using retrieved context and acknowledge missing information.
 - **Source inspection:** Displays retrieved passages, filenames, chunk IDs, and retrieval queries.
@@ -25,11 +25,11 @@ The current flow is:
 
 1. Sync markdown notes from `github.com/ditek/Notes` (can be changed in the `.env` file) or use local files in `notes/`.
 2. Split notes into chunks with LangChain's text splitter.
-3. Embed chunks with `all-MiniLM-L6-v2`.
+3. Embed chunks locally on CPU with `sentence-transformers/all-MiniLM-L6-v2`.
 4. Store vectors in Chroma.
-5. Retrieve relevant chunks for each question with top-k similarity retrieval.
-6. Rewrite follow-up questions using chat history.
-7. Generate answer with an appropriate LLM (currently using Qwen3-4B).
+5. Rewrite follow-up questions using chat history through OpenRouter.
+6. Retrieve relevant chunks for each question with top-k similarity retrieval.
+7. Generate a grounded answer through OpenRouter using an explicit free model.
 
 ## Setup
 After cloning, run these commands.
@@ -40,11 +40,25 @@ uv run pre-commit install
 cp .env.example .env
 ```
 
-Edit `.env` and set a Hugging Face token with at least this permission:
+Edit `.env` and set:
 
 ```text
-Make calls to Inference Providers
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENROUTER_MODEL=google/gemma-4-31b-it:free
 ```
+
+As of **2026-10-29**, OpenRouter's [model catalog](https://openrouter.ai/api/v1/models)
+lists no free Qwen models, and [`qwen/qwen3.8-27b:free`](https://openrouter.ai/api/v1/models/qwen/qwen3.8-27b:free/endpoints)
+has no serving endpoints. The default is the available `google/gemma-4-31b-it:free`.
+Set `OPENROUTER_MODEL` explicitly if you prefer a different available free model or
+if a free Qwen model becomes available. There is no automatic model fallback.
+Paid model IDs are rejected, and requests cap prompt, completion, and request pricing
+at zero. Free model availability and account rate limits can change.
+
+No Hugging Face inference token or GPU is required. The public embedding model is
+downloaded on first use and cached; indexing and retrieval then run locally. Only
+question rewriting and answer generation use OpenRouter. Both retain the existing
+250-token limit and temperature 0.1; optional reasoning is disabled for concise answers.
 
 ## Usage
 ### Sync Notes
@@ -72,6 +86,50 @@ uv run main.py index --reset
 ```bash
 uv run main.py ask "What is an Ansible inventory?" --k 3
 ```
+
+Build the index before asking. Missing credentials, empty or incompatible indexes,
+OpenRouter rate limits, and unavailable models produce actionable errors in the CLI
+and Streamlit. FastAPI returns a `detail` error with status 409 for incompatible
+indexes, 429 for rate limits, and 503 for configuration/provider failures.
+
+### Migrate an Existing Chroma Index
+
+The hosted model name alone does not establish vector compatibility: the previous
+provider's revision, pooling, and normalization settings were not recorded. Existing
+nonempty collections without matching local configuration metadata are refused for
+both querying and appending, even when dimensions match. New collections record
+the backend, model name, model options, and document/query encoding options.
+
+Stop running app/API processes while changing configuration or rebuilding. Keep your
+existing `CHROMA_DIR` and markdown notes, and set an **unused** collection name in `.env`:
+
+```text
+CHROMA_COLLECTION=notes-local-minilm-v1
+```
+
+Then index the existing local files without resetting the old collection:
+
+```bash
+uv run main.py index --notes-dir notes
+uv run main.py ask "What is an Ansible inventory?"
+```
+
+Restart Streamlit/FastAPI with the same configuration. This leaves the old `notes`
+collection and all markdown files intact. Changing `HF_EMBED_MODEL` or embedding
+settings later also requires a new collection or an explicit rebuild.
+
+To reuse the same collection instead, first stop all writers and copy the entire
+configured Chroma directory to a backup (example for the default local directory):
+
+```bash
+cp -a chroma_db chroma_db.before-local-embeddings
+uv run main.py index --notes-dir notes --reset
+```
+
+`--reset`, the sidebar's **Rebuild index**, and admin indexing with `reset=true`
+replace vectors in the selected collection. They never delete markdown notes.
+An interrupted rebuild can be retried from those files. Avoid repeated indexing
+without a reset in an existing compatible collection, as it appends chunks.
 
 ### Run The Streamlit App
 
@@ -124,8 +182,12 @@ Available admin endpoints:
 
 ### Environment Variables
 
-- Set `HF_TOKEN` to allow communication with Hugging Face. Only `Make calls to Inference Providers` permission is needed for that.
+- Set `OPENROUTER_API_KEY` as a secret for generation; indexing requires no API key.
+- Set `OPENROUTER_MODEL` to an available explicit `:free` model for rewriting and answering.
+- Set `HF_EMBED_MODEL` to select the local CPU embedding model (default: `sentence-transformers/all-MiniLM-L6-v2`).
+- Set `HF_HOME` only if you need a different writable model download cache.
 - Set `CHROMA_DIR=./chroma_db` for local development.
+- Set `CHROMA_COLLECTION` to the collection to build and query; use a new name when migrating.
 - Set `API_ALLOWED_ORIGINS` to a comma-separated list of browser origins allowed to call the FastAPI app. It defaults to `*`.
 - Set `API_ADMIN_TOKEN` only if you want to enable protected sync/index endpoints.
 - Keep `ENABLE_SIDEBAR_CONTROLS=false` to hide the sidebar in public embeds.
@@ -137,6 +199,19 @@ Deployment-specific files live under `deploy/`.
 
 For deploying to Hugging Face Spaces, see:
 
+[deployment instructions](deploy/huggingface/README.md).
+
+### Verification
+
 ```bash
-deploy/huggingface/README.md
+uv sync --locked
+uv run ruff check .
+uv run ruff format --check .
+uv run pytest -m 'not integration'
+RUN_LOCAL_EMBEDDINGS_TEST=1 uv run pytest -m integration
 ```
+
+Unit tests mock generation and model loading. The optional integration test downloads
+the public model, verifies CPU inference and Chroma retrieval, then embeds a query
+with network access blocked. No automated test consumes generation credits.
+Linux installs CPU-only PyTorch wheels through uv; the Dockerfile does the same for pip.

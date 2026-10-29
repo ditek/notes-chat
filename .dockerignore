@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+!.env.example
+.venv
+venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+chroma_db
+chroma_db.before-*
+notes

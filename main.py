@@ -1,5 +1,5 @@
 """
-This module implements a simple RAG system using LangChain and HuggingFace.
+This module implements a simple RAG system using local CPU embeddings, Chroma, and OpenRouter.
 It includes two main flows:
 1. Indexing flow: Load markdown notes, chunk them, create documents, generate embeddings, and build a vector store index.
 2. Asking flow: Given a question, retrieve relevant chunks from the vector store, format the context, and ask an LLM to answer the question based on the retrieved context.
@@ -13,6 +13,7 @@ Usage:
 import argparse
 
 from rag import (
+    RAGError,
     answer_question,
     create_embeddings,
     create_llm,
@@ -21,7 +22,8 @@ from rag import (
     sync_notes_from_github,
 )
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -30,7 +32,7 @@ if __name__ == "__main__":
     index_parser.add_argument(
         "--reset",
         action="store_true",
-        help="Reset the index by deleting existing vector store for the collection",
+        help="Replace all vectors in the selected collection (back up first; notes are preserved)",
     )
 
     sync_parser = subparsers.add_parser("sync-notes")
@@ -55,9 +57,9 @@ if __name__ == "__main__":
             index_notes(args.notes_dir, reset=True)
 
     elif args.command == "ask":
+        llm = create_llm()
         embeddings = create_embeddings()
         vector_store = load_vector_store(embeddings)
-        llm = create_llm()
         answer, docs, _ = answer_question(
             args.question,
             vector_store,
@@ -69,7 +71,12 @@ if __name__ == "__main__":
         for i, doc in enumerate(docs, start=1):
             source = doc.metadata.get("source", "unknown")
             chunk_id = doc.metadata.get("chunk_id", "?")
-            start = doc.metadata.get("start", "?")
-            end = doc.metadata.get("end", "?")
             print(f"[{i}] {source} chunk {chunk_id}")
             print(f"Content:\n{doc.page_content[:200]}\n{'-' * 40}")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except RAGError as exc:
+        raise SystemExit(f"Error: {exc}") from None

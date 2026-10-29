@@ -4,6 +4,7 @@ import streamlit as st
 
 from rag import (
     DEFAULT_NOTES_DIR,
+    RAGError,
     answer_question,
     create_embeddings,
     create_llm,
@@ -28,9 +29,9 @@ SUGGESTED_QUESTIONS = [
 
 @st.cache_resource
 def get_rag_resources():
+    llm = create_llm()
     embeddings = create_embeddings()
     vector_store = load_vector_store(embeddings)
-    llm = create_llm()
     return vector_store, llm
 
 
@@ -54,10 +55,13 @@ if enable_sidebar_controls:
                 count = sync_notes_from_github(DEFAULT_NOTES_DIR)
             st.success(f"Downloaded {count} notes")
         if st.button("Rebuild index"):
-            with st.spinner("Rebuilding index..."):
-                index_notes(DEFAULT_NOTES_DIR, reset=True)
-                get_rag_resources.clear()
-            st.success("Index rebuilt")
+            try:
+                with st.spinner("Rebuilding index..."):
+                    index_notes(DEFAULT_NOTES_DIR, reset=True)
+                    get_rag_resources.clear()
+                st.success("Index rebuilt")
+            except RAGError as exc:
+                st.error(str(exc))
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -126,14 +130,20 @@ if question:
 
     with st.chat_message("assistant", avatar=AVATARS["assistant"]):
         with st.spinner("Finding the answer..."):
-            vector_store, llm = get_rag_resources()
-            answer, docs, retrieval_query = answer_question(
-                question,
-                vector_store,
-                llm,
-                k=k,
-                chat_history=chat_history,
-            )
+            try:
+                vector_store, llm = get_rag_resources()
+                answer, docs, retrieval_query = answer_question(
+                    question,
+                    vector_store,
+                    llm,
+                    k=k,
+                    chat_history=chat_history,
+                )
+            except RAGError as exc:
+                # Failed requests must not become unanswered turns in LLM history.
+                st.session_state.messages.pop()
+                st.error(str(exc))
+                st.stop()
         st.markdown(answer)
 
         with st.expander("Sources"):

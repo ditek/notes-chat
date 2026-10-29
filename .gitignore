@@ -7,3 +7,6 @@ work/chroma_notes/
 chroma_db/
 .DS_Store
 notes/
+.pytest_cache/
+.ruff_cache/
+chroma_db.before-*/
