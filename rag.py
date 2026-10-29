@@ -1,25 +1,16 @@
 import os
 from pathlib import Path
 from textwrap import dedent
-from typing import cast
 
 import requests
 from dotenv import load_dotenv
-from huggingface_hub import InferenceClient
-from huggingface_hub.inference._providers import PROVIDER_OR_POLICY_T, PROVIDERS
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from openai import OpenAI
 
 load_dotenv()
-
-
-def _get_hf_provider() -> PROVIDER_OR_POLICY_T:
-    provider = os.getenv("HF_PROVIDER", "nscale")
-    if provider != "auto" and provider not in PROVIDERS:
-        raise RuntimeError(f"Invalid HF_PROVIDER={provider!r}")
-    return cast(PROVIDER_OR_POLICY_T, provider)
 
 
 DEFAULT_NOTES_DIR = Path(os.getenv("NOTES_DIR", "notes"))
@@ -28,8 +19,7 @@ DEFAULT_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION", "notes")
 DEFAULT_EMBED_MODEL = os.getenv(
     "HF_EMBED_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
 )
-DEFAULT_LLM_MODEL = os.getenv("HF_LLM_MODEL", "Qwen/Qwen3-4B-Instruct-2507")
-DEFAULT_HF_PROVIDER = _get_hf_provider()
+DEFAULT_LLM_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemma-4-31b-it:free")
 NOTES_REPO_CONTENTS_URL = os.getenv("NOTES_REPO_CONTENTS_URL", "")
 
 
@@ -183,24 +173,29 @@ def _format_context(docs):
 
 
 def create_llm():
-    token = os.getenv("HF_TOKEN")
+    token = os.getenv("OPENROUTER_API_KEY")
     if not token:
-        raise RuntimeError("Missing HF_TOKEN")
-    return InferenceClient(
-        model=DEFAULT_LLM_MODEL,
-        provider=DEFAULT_HF_PROVIDER,
+        raise RuntimeError("Missing OPENROUTER_API_KEY")
+    return OpenAI(
+        base_url="https://openrouter.ai/api/v1",
         api_key=token,
+        timeout=45.0,
+        max_retries=0,
     )
 
 
 def _ask_llm(system_prompt, user_prompt, llm) -> str | None:
-    response = llm.chat_completion(
+    response = llm.chat.completions.create(
+        model=DEFAULT_LLM_MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
         max_tokens=250,
         temperature=0.1,
+        extra_body={
+            "provider": {"max_price": {"prompt": 0, "completion": 0, "request": 0}},
+        },
     )
     return response.choices[0].message.content
 
