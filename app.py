@@ -28,9 +28,9 @@ SUGGESTED_QUESTIONS = [
 
 @st.cache_resource
 def get_rag_resources():
+    llm = create_llm()
     embeddings = create_embeddings()
     vector_store = load_vector_store(embeddings)
-    llm = create_llm()
     return vector_store, llm
 
 
@@ -126,14 +126,20 @@ if question:
 
     with st.chat_message("assistant", avatar=AVATARS["assistant"]):
         with st.spinner("Finding the answer..."):
-            vector_store, llm = get_rag_resources()
-            answer, docs, retrieval_query = answer_question(
-                question,
-                vector_store,
-                llm,
-                k=k,
-                chat_history=chat_history,
-            )
+            try:
+                vector_store, llm = get_rag_resources()
+                answer, docs, retrieval_query = answer_question(
+                    question,
+                    vector_store,
+                    llm,
+                    k=k,
+                    chat_history=chat_history,
+                )
+            except RuntimeError as exc:
+                # Removed failed requests from chat history
+                st.session_state.messages.pop()
+                st.error(str(exc))
+                st.stop()
         st.markdown(answer)
 
         with st.expander("Sources"):

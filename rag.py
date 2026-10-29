@@ -10,7 +10,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from openai import OpenAI
+from openai import APIConnectionError, APIError, APIStatusError, OpenAI
 
 load_dotenv()
 
@@ -194,7 +194,7 @@ def _format_context(docs):
 
 
 def create_llm():
-    token = os.getenv("OPENROUTER_API_KEY")
+    token = os.getenv("OPENROUTER_API_KEY", "").strip()
     if not token:
         raise RuntimeError("Missing OPENROUTER_API_KEY")
     return OpenAI(
@@ -205,20 +205,44 @@ def create_llm():
     )
 
 
-def _ask_llm(system_prompt, user_prompt, llm) -> str | None:
-    response = llm.chat.completions.create(
-        model=DEFAULT_LLM_MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        max_tokens=250,
-        temperature=0.1,
-        extra_body={
-            "provider": {"max_price": {"prompt": 0, "completion": 0, "request": 0}},
-        },
-    )
-    return response.choices[0].message.content
+def _ask_llm(system_prompt, user_prompt, llm) -> str:
+    try:
+        response = llm.chat.completions.create(
+            model=DEFAULT_LLM_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=250,
+            temperature=0.1,
+            extra_body={
+                "provider": {"max_price": {"prompt": 0, "completion": 0, "request": 0}},
+            },
+        )
+    except APIStatusError as exc:
+        messages = {
+            401: "OpenRouter rejected the API key. Check OPENROUTER_API_KEY.",
+            402: "OpenRouter denied access to this model. Check account access to free models.",
+            403: "OpenRouter denied access to this model. Check account access to free models.",
+            404: "OpenRouter model is unavailable. Check OPENROUTER_MODEL.",
+            429: "OpenRouter rate limit reached. Please retry later.",
+        }
+        raise RuntimeError(
+            messages.get(
+                exc.status_code,
+                "OpenRouter request failed. Retry later or check OPENROUTER_MODEL.",
+            )
+        ) from exc
+    except APIConnectionError as exc:
+        raise RuntimeError("Could not reach OpenRouter. Please retry later.") from exc
+    except APIError as exc:
+        raise RuntimeError(
+            "OpenRouter returned an invalid response. Please retry later."
+        ) from exc
+    answer = response.choices[0].message.content if response.choices else None
+    if not answer or not answer.strip():
+        raise RuntimeError("OpenRouter returned no answer. Please retry later.")
+    return answer
 
 
 def _format_chat_history(chat_history, max_messages=6):
