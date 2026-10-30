@@ -1,13 +1,14 @@
 # Chatty Notes
 
-[![Code checks](https://github.com/ditek/notes-chat/actions/workflows/ruff-check.yaml/badge.svg)](https://github.com/ditek/notes-chat/actions/workflows/ruff-check.yaml)
-[![Live Demo](https://img.shields.io/badge/Live-Demo-blue?style=flat-square)](https://diaa.dev/notes)
+[![Code checks](https://github.com/ditek/notes-chat/actions/workflows/ruff-check.yaml/badge.svg)](https://github.com/ditek/notes-chat/actions/workflows/ruff-check.yaml) 
+[![Live Demo](https://img.shields.io/badge/Live-Demo-blue?style=flat-square)](https://diaa.dev/notes) 
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/spaces/backyardhacker/notes-chat)
 
 Chatty Notes is a conversational Retrieval-Augmented Generation (RAG) application for querying text documents using natural language. I use it for my markdown notes, but it works with any text-based documents. PDF support is planned.
 
 It combines semantic search with an LLM to retrieve relevant information, generate context-aware answers, and expose the source passages used.
 
-<img src="docs/example-card.svg" alt="application architecture" width="720">
+<img src="docs/example-card.png" alt="application example" width="720">
 
 ## Key Features
 

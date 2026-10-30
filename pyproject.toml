@@ -1,7 +1,7 @@
 [project]
 name = "notes-chat"
 version = "0.1.0"
-description = "Notes Chat: Chat with your notes"
+description = "Chatty Notes: Chat with your notes"
 readme = "README.md"
 authors = [
     { name = "Diaa J", email = "ditek@users.noreply.github.com" }

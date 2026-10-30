@@ -1,24 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   font-family="-apple-system-body, ui-sans-serif, -apple-system, system-ui, Segoe UI, Helvetica, Apple Color Emoji, Arial, sans-serif, Segoe UI Emoji, Segoe UI Symbol"
-   font-weight="400"
-   data-d-component="svg"
-   fill="currentColor"
-   style="color:rgb(237, 237, 237)"
-   viewBox="0 0 340 365"
-   width="100%"
+   viewBox="0 0 1080 790"
+   width="1080"
+   height="790"
+   role="img"
+   aria-labelledby="diagram-title diagram-desc"
    version="1.1"
-   id="svg17"
-   sodipodi:docname="architecture3.svg"
+   id="svg37"
+   sodipodi:docname="architecture.svg"
    inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <defs
-     id="defs17" />
   <sodipodi:namedview
-     id="namedview17"
+     id="namedview37"
      pagecolor="#ffffff"
      bordercolor="#000000"
      borderopacity="0.25"
@@ -26,249 +22,422 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="3.1972603"
-     inkscape:cx="169.98929"
-     inkscape:cy="182.5"
-     inkscape:window-width="2560"
-     inkscape:window-height="1369"
+     inkscape:zoom="1.021519"
+     inkscape:cx="539.88227"
+     inkscape:cy="318.64312"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
      inkscape:window-x="-8"
      inkscape:window-y="-8"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg17" />
+     inkscape:current-layer="svg37" />
+  <title
+     id="diagram-title">Chatty Notes — RAG architecture</title>
+  <desc
+     id="diagram-desc">Three-stage flow. Documents are chunked, embedded locally using MiniLM, and stored in Chroma. A user's question and conversation history are optionally rewritten, then embedded with the same model for top-k similarity search in Chroma. Retrieved passages are sent to a Groq-hosted chat model, which produces an answer. Retrieved source passages and metadata are displayed alongside it.</desc>
+  <defs
+     id="defs1">
+    <marker
+       id="arrow"
+       markerWidth="9"
+       markerHeight="9"
+       refX="7"
+       refY="4.5"
+       orient="auto"
+       markerUnits="userSpaceOnUse">
+      <path
+         d="M1 1 L7 4.5 L1 8 Z"
+         fill="#556B80"
+         class="arrow-tip"
+         id="path1" />
+    </marker>
+    <style
+       id="style1">
+      /* Default: GitHub light theme / light system preference. */
+      text { font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif; }
+      .page-title { fill: #18283B; font-weight: 700; font-size: 27px; }
+      .page-subtitle { fill: #54677B; font-size: 15px; }
+      .lane-name { font-size: 17px; font-weight: 700; }
+      .node-title { fill: #213247; font-weight: 650; font-size: 19px; }
+      .node-detail { fill: #485B70; font-size: 14px; }
+      .arrow-line { fill: none; stroke: #556B80; stroke-width: 2.5; stroke-linecap: round; marker-end: url(#arrow); }
+      .arrow-tip { fill: #556B80; }
+      @media (prefers-color-scheme: dark) {
+
+      /* Dark palette: all text, arrowheads, outlines and card fills are switched together. */
+      .page-bg { fill: #0F1724; }
+      .page-border { stroke: #34465D; }
+      .page-title { fill: #EFF5FB; }
+      .page-subtitle { fill: #B4C5D7; }
+      .lane-index { fill: #1C3656; stroke: #557DB1; }
+      .lane-retrieval { fill: #352646; stroke: #9673B9; }
+      .lane-generation { fill: #42341F; stroke: #B78B45; }
+      .lane-text-index { fill: #C8E1FF; }
+      .lane-text-retrieval { fill: #EAD8FF; }
+      .lane-text-generation { fill: #FFE6B3; }
+      .node-index { fill: #192C43; stroke: #668BB7; }
+      .node-retrieval { fill: #302640; stroke: #9877BE; }
+      .node-search { fill: #173A35; stroke: #56AA9C; }
+      .node-llm { fill: #433321; stroke: #C7A05B; }
+      .node-title { fill: #EEF4FB; }
+      .node-detail { fill: #C5D3E1; }
+      .arrow-line { stroke: #ACBED0; }
+      .arrow-tip { fill: #ACBED0; }
+      }
+</style>
+  </defs>
+  <!-- Explicit background ensures legibility in both GitHub light and dark themes. -->
   <rect
-     x="15"
-     y="10"
-     width="145"
-     height="46"
-     rx="7"
-     fill="#E9EEF7"
-     stroke="#8DA6C8"
-     id="rect1" />
-  <text
-     x="87.5"
-     y="27"
-     font-size="11"
-     fill="#243447"
-     text-anchor="middle"
-     font-weight="600"
-     id="text1">Markdown documents</text>
-  <text
-     x="87.5"
-     y="42"
-     font-size="9"
-     fill="#43556A"
-     text-anchor="middle"
-     id="text2">Local files / GitHub notes</text>
-  <path
-     d="M87.5 56 v22"
-     stroke="currentColor"
-     stroke-width="1.3"
-     opacity=".65"
-     id="path2" />
-  <path
-     d="M83 72 l4.5 6 4.5 -6"
-     stroke="currentColor"
+     width="1080"
+     height="728.32715"
+     rx="18"
+     fill="#f8fafd"
+     class="page-bg"
+     id="rect1"
+     x="0"
+     y="61.672863"
+     style="stroke-width:0.960173" />
+  <rect
+     x="1"
+     y="73.720558"
+     width="1078"
+     height="716.27948"
+     rx="17"
      fill="none"
-     stroke-width="1.3"
-     id="path3" />
+     stroke="#dde5ee"
+     stroke-width="1.90681"
+     class="page-border"
+     id="rect2" />
+  <!-- Swimlane headings -->
   <rect
-     x="15"
-     y="78"
-     width="145"
-     height="46"
-     rx="7"
-     fill="#E9EEF7"
-     stroke="#8DA6C8"
+     x="38"
+     y="111"
+     width="298"
+     height="45"
+     rx="10"
+     fill="#DFEAF9"
+     stroke="#A2BADC"
+     class="lane-index"
      id="rect3" />
   <text
-     x="87.5"
-     y="95"
-     font-size="11"
-     fill="#243447"
+     x="187"
+     y="140"
      text-anchor="middle"
-     font-weight="600"
-     id="text3">Chunking</text>
-  <text
-     x="87.5"
-     y="110"
-     font-size="9"
-     fill="#43556A"
-     text-anchor="middle"
-     id="text4">500 characters · 50 overlap</text>
-  <path
-     d="M87.5 124 v22"
-     stroke="currentColor"
-     stroke-width="1.3"
-     opacity=".65"
-     id="path4" />
-  <path
-     d="M83 140 l4.5 6 4.5 -6"
-     stroke="currentColor"
-     fill="none"
-     stroke-width="1.3"
-     id="path5" />
+     fill="#24456F"
+     class="lane-name lane-text-index"
+     id="text4">01  Document indexing</text>
   <rect
-     x="15"
-     y="146"
-     width="145"
-     height="46"
-     rx="7"
-     fill="#E9EEF7"
-     stroke="#8DA6C8"
+     x="391"
+     y="111"
+     width="298"
+     height="45"
+     rx="10"
+     fill="#EEE4F8"
+     stroke="#BAA5D6"
+     class="lane-retrieval"
+     id="rect4" />
+  <text
+     x="540"
+     y="140"
+     text-anchor="middle"
+     fill="#553975"
+     class="lane-name lane-text-retrieval"
+     id="text5">02  Conversational retrieval</text>
+  <rect
+     x="744"
+     y="111"
+     width="298"
+     height="45"
+     rx="10"
+     fill="#FCEBCF"
+     stroke="#DFBE81"
+     class="lane-generation"
      id="rect5" />
   <text
-     x="87.5"
-     y="163"
-     font-size="11"
-     fill="#243447"
+     x="893"
+     y="140"
      text-anchor="middle"
-     font-weight="600"
-     id="text5">Hugging Face embeddings</text>
-  <text
-     x="87.5"
-     y="178"
-     font-size="9"
-     fill="#43556A"
-     text-anchor="middle"
-     id="text6">all-MiniLM-L6-v2</text>
-  <path
-     d="M87.5 192 v22"
-     stroke="currentColor"
-     stroke-width="1.3"
-     opacity=".65"
-     id="path6" />
-  <path
-     d="M83 208 l4.5 6 4.5 -6"
-     stroke="currentColor"
-     fill="none"
-     stroke-width="1.3"
-     id="path7" />
+     fill="#78552D"
+     class="lane-name lane-text-generation"
+     id="text6">03  Answer generation</text>
+  <!-- Indexing nodes -->
   <rect
-     x="15"
-     y="214"
-     width="145"
-     height="46"
-     rx="7"
-     fill="#DCECEB"
-     stroke="#639A95"
-     id="rect7" />
+     x="38"
+     y="186"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#EDF3FB"
+     stroke="#93ACCF"
+     stroke-width="1.5"
+     class="node-index"
+     id="rect6" />
   <text
-     x="87.5"
-     y="231"
-     font-size="11"
-     fill="#243447"
-     text-anchor="middle"
-     font-weight="600"
-     id="text7">Chroma vector store</text>
-  <text
-     x="87.5"
-     y="246"
-     font-size="9"
-     fill="#43556A"
-     text-anchor="middle"
-     id="text8">Persistent semantic index</text>
-  <rect
      x="187"
-     y="10"
-     width="138"
-     height="46"
-     rx="7"
-     fill="#F1E8FA"
-     stroke="#A78BC9"
+     y="217"
+     text-anchor="middle"
+     class="node-title"
+     id="text7">Markdown documents</text>
+  <text
+     x="187"
+     y="241"
+     text-anchor="middle"
+     class="node-detail"
+     id="text8">Local files or GitHub notes</text>
+  <rect
+     x="38"
+     y="289"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#EDF3FB"
+     stroke="#93ACCF"
+     stroke-width="1.5"
+     class="node-index"
      id="rect8" />
   <text
-     x="256"
-     y="27"
-     font-size="11"
-     fill="#443155"
-     text-anchor="middle"
-     font-weight="600"
-     id="text9">User question</text>
-  <text
-     x="256"
-     y="42"
-     font-size="9"
-     fill="#554568"
-     text-anchor="middle"
-     id="text10">+ conversation history</text>
-  <path
-     d="M256 56 v22"
-     stroke="currentColor"
-     stroke-width="1.3"
-     opacity=".65"
-     id="path10" />
-  <rect
      x="187"
-     y="78"
-     width="138"
-     height="46"
-     rx="7"
-     fill="#F1E8FA"
-     stroke="#A78BC9"
+     y="320"
+     text-anchor="middle"
+     class="node-title"
+     id="text9">Recursive text splitting</text>
+  <text
+     x="187"
+     y="344"
+     text-anchor="middle"
+     class="node-detail"
+     id="text10">500 characters · 50 overlap</text>
+  <rect
+     x="38"
+     y="392"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#EDF3FB"
+     stroke="#93ACCF"
+     stroke-width="1.5"
+     class="node-index"
      id="rect10" />
   <text
-     x="256"
-     y="95"
-     font-size="11"
-     fill="#443155"
-     text-anchor="middle"
-     font-weight="600"
-     id="text11">Query rewriting</text>
-  <text
-     x="256"
-     y="110"
-     font-size="9"
-     fill="#554568"
-     text-anchor="middle"
-     id="text12">If chat history exists</text>
-  <path
-     d="M256 124 v90 h-96"
-     stroke="currentColor"
-     stroke-width="1.3"
-     opacity=".7"
-     fill="none"
-     id="path12" />
-  <path
-     d="M165 210 l-5 4 5 4"
-     stroke="currentColor"
-     fill="none"
-     stroke-width="1.3"
-     id="path13" />
-  <path
-     d="M87.5 260 v22 H256 v10"
-     stroke="currentColor"
-     fill="none"
-     stroke-width="1.3"
-     opacity=".7"
-     id="path14" />
-  <path
-     d="M251 286 l5 6 5 -6"
-     stroke="currentColor"
-     fill="none"
-     stroke-width="1.3"
-     id="path15" />
-  <rect
      x="187"
-     y="292"
-     width="138"
-     height="52"
-     rx="7"
-     fill="#FBEEDB"
-     stroke="#C9A46B"
-     id="rect15" />
-  <text
-     x="256"
-     y="309"
-     font-size="11"
-     fill="#59442A"
+     y="423"
      text-anchor="middle"
-     font-weight="600"
-     id="text15">LLM generation</text>
+     class="node-title"
+     id="text11">Document embeddings</text>
   <text
-     x="256"
-     y="324"
-     font-size="9"
-     fill="#685039"
+     x="187"
+     y="447"
      text-anchor="middle"
-     id="text16">Answer + retrieved sources</text>
+     class="node-detail"
+     id="text12">MiniLM · local CPU inference</text>
+  <rect
+     x="38"
+     y="495"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#E2F3EF"
+     stroke="#64A799"
+     stroke-width="1.7"
+     class="node-search"
+     id="rect12" />
+  <text
+     x="187"
+     y="526"
+     text-anchor="middle"
+     class="node-title"
+     id="text13">Chroma vector index</text>
+  <text
+     x="187"
+     y="550"
+     text-anchor="middle"
+     class="node-detail"
+     id="text14">Persistent document vectors</text>
+  <!-- Query nodes -->
+  <rect
+     x="391"
+     y="186"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#F3ECFB"
+     stroke="#B29ACF"
+     stroke-width="1.5"
+     class="node-retrieval"
+     id="rect14" />
+  <text
+     x="540"
+     y="227"
+     text-anchor="middle"
+     class="node-title"
+     id="text15">Question + chat history</text>
+  <rect
+     x="391"
+     y="289"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#F3ECFB"
+     stroke="#B29ACF"
+     stroke-width="1.5"
+     class="node-retrieval"
+     id="rect16" />
+  <text
+     x="540"
+     y="330"
+     text-anchor="middle"
+     class="node-title"
+     id="text17">Optional query rewriting</text>
+  <rect
+     x="391"
+     y="392"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#F3ECFB"
+     stroke="#B29ACF"
+     stroke-width="1.5"
+     class="node-retrieval"
+     id="rect18" />
+  <text
+     x="540"
+     y="423"
+     text-anchor="middle"
+     class="node-title"
+     id="text19">Query embedding</text>
+  <text
+     x="540"
+     y="447"
+     text-anchor="middle"
+     class="node-detail"
+     id="text20">MiniLM via Chroma</text>
+  <rect
+     x="391"
+     y="495"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#E2F3EF"
+     stroke="#64A799"
+     stroke-width="1.7"
+     class="node-search"
+     id="rect20" />
+  <text
+     x="540"
+     y="526"
+     text-anchor="middle"
+     class="node-title"
+     id="text21">Chroma similarity search</text>
+  <text
+     x="540"
+     y="550"
+     text-anchor="middle"
+     class="node-detail"
+     id="text22">Top-k vector retrieval</text>
+  <!-- Answer nodes -->
+  <rect
+     x="744"
+     y="495"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#E2F3EF"
+     stroke="#64A799"
+     stroke-width="1.7"
+     class="node-search"
+     id="rect22" />
+  <text
+     x="893"
+     y="526"
+     text-anchor="middle"
+     class="node-title"
+     id="text23">Retrieved passages</text>
+  <text
+     x="893"
+     y="550"
+     text-anchor="middle"
+     class="node-detail"
+     id="text24">Chunks with source metadata</text>
+  <rect
+     x="744"
+     y="598"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#FFF1D9"
+     stroke="#D4AC69"
+     stroke-width="1.5"
+     class="node-llm"
+     id="rect24" />
+  <text
+     x="893"
+     y="639"
+     text-anchor="middle"
+     class="node-title"
+     id="text25">Answer generation</text>
+  <rect
+     x="744"
+     y="701"
+     width="298"
+     height="72"
+     rx="12"
+     fill="#E2F3EF"
+     stroke="#64A799"
+     stroke-width="1.7"
+     class="node-search"
+     id="rect26" />
+  <text
+     x="893"
+     y="732"
+     text-anchor="middle"
+     class="node-title"
+     id="text27">Answer + source inspector</text>
+  <text
+     x="893"
+     y="756"
+     text-anchor="middle"
+     class="node-detail"
+     id="text28">Retrieved text, file and chunk ID</text>
+  <!-- Downward arrows (kept separate from box edges for visible arrowheads) -->
+  <path
+     class="arrow-line"
+     d="M187 263 V281"
+     id="path28" />
+  <path
+     class="arrow-line"
+     d="M187 366 V384"
+     id="path29" />
+  <path
+     class="arrow-line"
+     d="M187 469 V487"
+     id="path30" />
+  <path
+     class="arrow-line"
+     d="M540 263 V281"
+     id="path31" />
+  <path
+     class="arrow-line"
+     d="M540 366 V384"
+     id="path32" />
+  <path
+     class="arrow-line"
+     d="M540 469 V487"
+     id="path33" />
+  <path
+     class="arrow-line"
+     d="M893 572 V590"
+     id="path34" />
+  <path
+     class="arrow-line"
+     d="M893 675 V693"
+     id="path35" />
+  <!-- Chroma index + query embedding converge at similarity search. -->
+  <path
+     class="arrow-line"
+     d="M343 531 H383"
+     id="path36" />
+  <path
+     class="arrow-line"
+     d="M696 531 H736"
+     id="path37" />
 </svg>
